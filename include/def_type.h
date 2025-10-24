@@ -75,9 +75,10 @@ Particle Effects can be added with xxx-part.tbm (XMT; special type as it has no 
 
 typedef struct FS_TABLE_ENTRY
 {
-    const char *base_name; // e.g., "weapons"
-    const char *extension; // "tbl" or "tbm" — can be set dynamically at runtime
-    bool is_modular;       // true if supports modular .tbm variants
+    const char *base_name;      // e.g., "weapons"
+    const char *extension;      // "tbl" or "tbm" — can be set dynamically at runtime
+    bool is_modular;            // true if supports modular .tbm variants
+    const char *modular_suffix; // e.g., "-aic", "-aip", "-amr"
 } FS_TABLE_ENTRY;
 
 /* =======================

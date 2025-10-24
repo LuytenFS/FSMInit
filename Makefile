@@ -3,9 +3,9 @@ CC = gcc
 BUILD ?= DEBUG
 
 ifeq ($(BUILD),DEBUG)
-    CFLAGS = -g -O0 -Wall
+    CFLAGS = -g -O0 -Wall -Iinclude
 else ifeq ($(BUILD),RELEASE)
-    CFLAGS = -O2 -Wall
+    CFLAGS = -O2 -Wall -Iinclude
 endif
 
 SRCDIR = src
