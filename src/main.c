@@ -9,7 +9,7 @@
 int main(int argc, char *argv[])
 {
     // -----------------------------
-    // Step 1: Check at least one argument
+    // Check at least one argument
     // -----------------------------
     if (argc < 2)
     {
@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
     }
 
     // -----------------------------
-    // Step 2: Handle -help
+    // Handle -help
     // -----------------------------
     if (strcmp(argv[1], "-help") == 0)
     {
@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
     }
 
     // -----------------------------
-    // Step 3: Determine command type
+    // Determine command type
     // -----------------------------
     bool is_stdmc = (strcmp(argv[1], "-stdmc") == 0);
     bool is_stdm = (strcmp(argv[1], "-stdm") == 0);
@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
     }
 
     // -----------------------------
-    // Step 4: Validate argument count
+    // Validate argument count
     // -----------------------------
     int min_args = is_stdm ? 2 + 1 : 3 + 1; // command+path or command+path+table_type
     if (argc < min_args)
@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
     }
 
     // -----------------------------
-    // Step 5: Initialize operation struct
+    // Initialize operation struct
     // -----------------------------
     OP operation = {0};
     operation.command = argv[1];
@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
     operation.debug = 0;
 
     // -----------------------------
-    // Step 6: Handle optional prefix if -tbm (only for -stdmc)
+    // Handle optional prefix if -tbm (only for -stdmc)
     // -----------------------------
     int start_index = is_stdm ? 3 : 4; // argv index where optional args start
     if (is_stdmc && strcmp(operation.table_type, "-tbm") == 0)
@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
     }
 
     // -----------------------------
-    // Step 7: Handle optional -debug flag
+    // Handle optional -debug flag
     // -----------------------------
     for (int i = start_index; i < argc; ++i)
     {
@@ -106,9 +106,28 @@ int main(int argc, char *argv[])
     }
 
     // -----------------------------
-    // Step 8: Execute based on command
+    // Debug output if enabled
     // -----------------------------
-    create_directories(operation.path); // Always create directories
+    if (operation.debug)
+    {
+        FILE *log_file = fopen("log.txt", "a");
+        if (log_file)
+        {
+            fprintf(log_file, "=== Debug Start ===\n");
+            fprintf(log_file, "Command       : %s\n", operation.command);
+            fprintf(log_file, "Path          : %s\n", operation.path);
+            fprintf(log_file, "Table type    : %s\n", operation.table_type ? operation.table_type : "N/A");
+            fprintf(log_file, "Prefix        : %s\n", operation.prefix ? operation.prefix : "N/A");
+            fprintf(log_file, "Debug enabled : %d\n", operation.debug);
+            fprintf(log_file, "===================\n\n");
+            fclose(log_file);
+        }
+    }
+
+    // -----------------------------
+    // Execute based on command
+    // -----------------------------
+    create_directories(&operation); // Pass pointer to operation
 
     if (is_stdmc)
     {
