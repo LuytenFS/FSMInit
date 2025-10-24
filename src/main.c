@@ -62,6 +62,33 @@ int main(int argc, char *argv[])
         }
     }
 
+    if (strcmp(operation.command, "-help") == 0)
+    {
+        if (argc != 2) // -help must be the only argument
+        {
+            fprintf(stderr, "Error: The -help command cannot have additional arguments.\n");
+            return 1;
+        }
+
+        // Print usage info
+        printf(
+            "Command-line arguments for the program:\n\n"
+            "1. <command>       : The operation to perform. Allowed values:\n"
+            "                     - \"-stdm\"   : Standard Mod (no tables)\n"
+            "                     - \"-stdmc\"  : Standard Mod Complex (with tables)\n"
+            "                     - \"-help\"   : Display usage information\n\n"
+            "2. <path>          : The directory path where the tool will create\n"
+            "                     directories and tables.\n\n"
+            "3. <-tbl/-tbm>     : Specifies whether to create standard .tbl files or\n"
+            "                     modular .tbm files.\n\n"
+            "4. <prefix>        : Optional prefix for .tbm files. Required only if\n"
+            "                     \"-tbm\" is specified. Ignored for \"-tbl\".\n\n"
+            "5. [-debug]        : Optional flag. Enables debug output to \"log.txt\" in\n"
+            "                     the program's current directory.\n");
+
+        return 0; // Exit immediately after showing help
+    }
+
     /*
        The 'operation' struct now contains all CLI input:
        - operation.command

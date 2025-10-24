@@ -127,7 +127,7 @@ void create_directories(const char* base_path)
 {
     for(size_t i = 0; i < fs_dirs_count; i++)
     {
-        char dir_path[1024];
+        char dir_path[4096];
         snprintf(dir_path, sizeof(dir_path), "%s/%s", base_path, dir_path);
         if (mkdir(dir_path, 0755) != 0 && errno != EEXIST)
         {
@@ -144,16 +144,11 @@ void create_directories(const char* base_path)
     }
 }
 
-#include <stdio.h>
-#include <sys/stat.h>
-#include <errno.h>
-#include <string.h>
-
 /* Assumes fs_tables[], static_tables[], and fs_tables_count/static_tables_count exist */
 
 void create_modular_tables(const OP *operation)
 {
-    char tables_path[1024];
+    char tables_path[4096];
     snprintf(tables_path, sizeof(tables_path), "%s/tables", operation->path);
 
     // Ensure the 'tables/' directory exists
@@ -166,7 +161,7 @@ void create_modular_tables(const OP *operation)
     for (size_t i = 0; i < fs_tables_count; ++i)
     {
         const FS_TABLE_ENTRY *entry = &fs_tables[i];
-        char filename[1024];
+        char filename[4096];
 
         // Determine file extension: .tbm for modular + -tbm, otherwise .tbl
         const char *ext = (entry->is_modular && strcmp(operation->table_type, "-tbm") == 0) ? "tbm" : "tbl";
@@ -194,7 +189,7 @@ void create_modular_tables(const OP *operation)
 
 void create_static_tables(const OP *operation)
 {
-    char tables_path[1024];
+    char tables_path[4096];
     snprintf(tables_path, sizeof(tables_path), "%s/tables", operation->path);
 
     // Ensure the 'tables/' directory exists
@@ -206,7 +201,7 @@ void create_static_tables(const OP *operation)
 
     for (size_t i = 0; i < static_tables_count; ++i)
     {
-        char filename[1024];
+        char filename[4096];
         snprintf(filename, sizeof(filename), "%s/%s", tables_path, static_tables[i].name);
 
         FILE *f = fopen(filename, "w");
