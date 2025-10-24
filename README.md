@@ -2,8 +2,6 @@
 
 FSMInit is an automation tool designed to simplify the creation of directories and tables needed for FreeSpace mods. This process is usually tedious, but FSMInit makes it quick and easy by accepting command-line arguments.
 
-However it is not functional as of now.
-
 ---
 
 ### Parameters
