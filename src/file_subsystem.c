@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <sys/stat.h>
+#include <errno.h>
 
 #include "def_type.h"
 
@@ -116,3 +118,105 @@ FS_TABLES static_tables[] = {
     {"Scripting.tbl"}};
 
 const size_t static_tables_count = sizeof(static_tables) / sizeof(static_tables[0]);
+
+/* =====================================
+   File & Directory Creation
+   ===================================== */
+
+void create_directories(const char* base_path)
+{
+    for(size_t i = 0; i < fs_dirs_count; i++)
+    {
+        char dir_path[1024];
+        snprintf(dir_path, sizeof(dir_path), "%s/%s", base_path, dir_path);
+        if (mkdir(dir_path, 0755) != 0 && errno != EEXIST)
+        {
+            perror(dir_path);
+            continue;
+        }
+        for (size_t j = 0; j < fs_dirs[i].subdir_count; ++j){
+            char subdir_path[1024];
+            snprintf(dir_path, sizeof(dir_path), "%s/%s", dir_path, fs_dirs[i].subdirs[j]);
+            if(mkdir(subdir_path, 0755) != 0 && errno != EEXIST){
+                perror(subdir_path);
+            }
+        }
+    }
+}
+
+#include <stdio.h>
+#include <sys/stat.h>
+#include <errno.h>
+#include <string.h>
+
+/* Assumes fs_tables[], static_tables[], and fs_tables_count/static_tables_count exist */
+
+void create_modular_tables(const OP *operation)
+{
+    char tables_path[1024];
+    snprintf(tables_path, sizeof(tables_path), "%s/tables", operation->path);
+
+    // Ensure the 'tables/' directory exists
+    if (mkdir(tables_path, 0755) != 0 && errno != EEXIST)
+    {
+        if (operation->debug)
+            perror(tables_path);
+    }
+
+    for (size_t i = 0; i < fs_tables_count; ++i)
+    {
+        const FS_TABLE_ENTRY *entry = &fs_tables[i];
+        char filename[1024];
+
+        // Determine file extension: .tbm for modular + -tbm, otherwise .tbl
+        const char *ext = (entry->is_modular && strcmp(operation->table_type, "-tbm") == 0) ? "tbm" : "tbl";
+
+        if (strcmp(operation->table_type, "-tbm") == 0 && entry->is_modular && operation->prefix)
+        {
+            snprintf(filename, sizeof(filename), "%s/%s-%s.%s", tables_path, operation->prefix, entry->base_name, ext);
+        }
+        else
+        {
+            snprintf(filename, sizeof(filename), "%s/%s.%s", tables_path, entry->base_name, ext);
+        }
+
+        FILE *f = fopen(filename, "w");
+        if (f)
+        {
+            fclose(f); // Close immediately after creating an empty file
+        }
+        else if (operation->debug)
+        {
+            perror(filename); // Print error if debug is enabled
+        }
+    }
+}
+
+void create_static_tables(const OP *operation)
+{
+    char tables_path[1024];
+    snprintf(tables_path, sizeof(tables_path), "%s/tables", operation->path);
+
+    // Ensure the 'tables/' directory exists
+    if (mkdir(tables_path, 0755) != 0 && errno != EEXIST)
+    {
+        if (operation->debug)
+            perror(tables_path);
+    }
+
+    for (size_t i = 0; i < static_tables_count; ++i)
+    {
+        char filename[1024];
+        snprintf(filename, sizeof(filename), "%s/%s", tables_path, static_tables[i].name);
+
+        FILE *f = fopen(filename, "w");
+        if (f)
+        {
+            fclose(f); // Close immediately after creating an empty file
+        }
+        else if (operation->debug)
+        {
+            perror(filename); // Print error if debug is enabled
+        }
+    }
+}
