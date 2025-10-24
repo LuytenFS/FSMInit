@@ -28,39 +28,12 @@ Command-line arguments for the program:
 
 int main(int argc, char *argv[])
 {
-    if (argc < 4)
-    {
-        fprintf(stderr, "Usage: <command> <path> <-tbl/-tbm> [prefix if -tbm] [optional -debug]\n");
-        return 1;
-    }
-
     OP operation = {0};
     operation.command = argv[1];
     operation.path = argv[2];
     operation.table_type = argv[3];
     operation.prefix = NULL;
     operation.debug = 0;
-
-    // Handle optional prefix for .tbm
-    if (strcmp(operation.table_type, "-tbm") == 0)
-    {
-        if (argc < 5)
-        {
-            fprintf(stderr, "Error: .tbm requires a prefix argument.\n");
-            return 1;
-        }
-        operation.prefix = argv[4];
-    }
-
-    // Handle optional -debug flag
-    for (int i = 4; i < argc; ++i)
-    {
-        if (strcmp(argv[i], "-debug") == 0)
-        {
-            operation.debug = 1;
-            break;
-        }
-    }
 
     if (strcmp(operation.command, "-help") == 0)
     {
@@ -87,6 +60,33 @@ int main(int argc, char *argv[])
             "                     the program's current directory.\n");
 
         return 0; // Exit immediately after showing help
+    }
+
+    if (argc < 4)
+    {
+        fprintf(stderr, "Usage: <command> <path> <-tbl/-tbm> [prefix if -tbm] [optional -debug]\n");
+        return 1;
+    }
+
+    // Handle optional prefix for .tbm
+    if (strcmp(operation.table_type, "-tbm") == 0)
+    {
+        if (argc < 5)
+        {
+            fprintf(stderr, "Error: .tbm requires a prefix argument.\n");
+            return 1;
+        }
+        operation.prefix = argv[4];
+    }
+
+    // Handle optional -debug flag
+    for (int i = 4; i < argc; ++i)
+    {
+        if (strcmp(argv[i], "-debug") == 0)
+        {
+            operation.debug = 1;
+            break;
+        }
     }
 
     /*
