@@ -52,7 +52,7 @@ FS_DIRECTORIES fs_dirs[] = {
     {"16b11k", NULL, 0},
     {"tables", NULL, 0},
     {"text", NULL, 0},
-    {"voice", voice_subdirs, sizeof(voice_subdirs) / sizeof(voice_subdirs[0])}};
+    {"voice", voice_subdirs, voice_subdirs_count}};
 
 const size_t fs_dirs_count = sizeof(fs_dirs) / sizeof(fs_dirs[0]);
 
@@ -98,8 +98,7 @@ FS_TABLE_ENTRY fs_tables[] = {
     {"tstrings", "tbl", false, "-tlc"},
     {"weapons", "tbl", true, "-wep"},
     {"weapon_expl", "tbl", false, "-wxp"},
-    {"particle_effects", "tbl", true, "-part"} // special XMT-only case
-};
+    {"particle_effects", "tbl", true, "-part"}};
 
 const size_t fs_tables_count = sizeof(fs_tables) / sizeof(fs_tables[0]);
 
@@ -123,95 +122,144 @@ const size_t static_tables_count = sizeof(static_tables) / sizeof(static_tables[
    File & Directory Creation
    ===================================== */
 
-void create_directories(const char *base_path)
+void create_directories(const OP *operation)
 {
-    for (size_t i = 0; i < fs_dirs_count; ++i)
+    if (!operation || !operation->path || operation->path[0] == '\0')
+        return;
+
+    FILE *log = operation->debug ? fopen("log.txt", "a") : NULL;
+
+    for (size_t i = 0; i < fs_dirs_count; i++)
     {
-        char dir_path[4096];
-        snprintf(dir_path, sizeof(dir_path), "%s/%s", base_path, fs_dirs[i].name);
-
-        if (mkdir(dir_path, 0755) != 0 && errno != EEXIST)
-        {
-            perror(dir_path);
+        char *dir_path = NULL;
+        if (asprintf(&dir_path, "%s/%s", operation->path, fs_dirs[i].name) == -1)
             continue;
-        }
 
-        // subdirs
-        for (size_t j = 0; j < fs_dirs[i].subdir_count; ++j)
+        int mkdir_result = mkdir(dir_path, 0755);
+        if (mkdir_result != 0 && errno != EEXIST)
         {
-            char subdir_path[4096];
-            snprintf(subdir_path, sizeof(subdir_path), "%s/%s", dir_path, fs_dirs[i].subdirs[j]);
-            if (mkdir(subdir_path, 0755) != 0 && errno != EEXIST)
-            {
-                perror(subdir_path);
-            }
+            if (log)
+                fprintf(log, "Failed to create directory: %s - %s\n", dir_path, strerror(errno));
         }
-    }
-}
+        else if (log)
+            fprintf(log, "Created directory: %s\n", dir_path);
 
-/* Assumes fs_tables[], static_tables[], and fs_tables_count/static_tables_count exist */
+        for (size_t j = 0; j < fs_dirs[i].subdir_count; j++)
+        {
+            char *subdir_path = NULL;
+            if (asprintf(&subdir_path, "%s/%s", dir_path, fs_dirs[i].subdirs[j]) == -1)
+                continue;
+
+            int sub_mkdir_result = mkdir(subdir_path, 0755);
+            if (sub_mkdir_result != 0 && errno != EEXIST)
+            {
+                if (log)
+                    fprintf(log, "Failed to create subdirectory: %s - %s\n", subdir_path, strerror(errno));
+            }
+            else if (log)
+                fprintf(log, "Created subdirectory: %s\n", subdir_path);
+
+            free(subdir_path);
+        }
+
+        free(dir_path);
+    }
+
+    if (log)
+        fclose(log);
+}
 
 void create_modular_tables(const OP *operation)
 {
-    char tables_path[4096];
-    snprintf(tables_path, sizeof(tables_path), "%s/tables", operation->path);
+    if (!operation || !operation->path || operation->path[0] == '\0')
+        return;
 
-    if (mkdir(tables_path, 0755) != 0 && errno != EEXIST)
-    {
-        if (operation->debug)
-            perror(tables_path);
-    }
+    FILE *log = operation->debug ? fopen("log.txt", "a") : NULL;
+    const char *table_type = operation->table_type ? operation->table_type : "-tbl";
+    const char *prefix = operation->prefix ? operation->prefix : "";
 
-    for (size_t i = 0; i < fs_tables_count; ++i)
+    char *tables_path = NULL;
+    if (asprintf(&tables_path, "%s/tables", operation->path) == -1)
+        return;
+
+    int mkdir_result = mkdir(tables_path, 0755);
+    if (mkdir_result != 0 && errno != EEXIST && log)
+        fprintf(log, "Failed to create tables directory: %s - %s\n", tables_path, strerror(errno));
+    else if (mkdir_result == 0 && log)
+        fprintf(log, "Created tables directory: %s\n", tables_path);
+
+    for (size_t i = 0; i < fs_tables_count; i++)
     {
         const FS_TABLE_ENTRY *entry = &fs_tables[i];
-        char filename[4096];
+        char *filename = NULL;
+        const char *ext = (entry->is_modular && strcmp(table_type, "-tbm") == 0) ? "tbm" : "tbl";
 
-        const char *ext = (entry->is_modular && strcmp(operation->table_type, "-tbm") == 0) ? "tbm" : "tbl";
-
-        if (strcmp(operation->table_type, "-tbm") == 0 && entry->is_modular && operation->prefix)
+        if (entry->is_modular && strcmp(table_type, "-tbm") == 0 && prefix[0] != '\0')
         {
-            // Use the modular suffix
-            snprintf(filename, sizeof(filename), "%s/%s%s.%s", tables_path, operation->prefix, entry->modular_suffix, ext);
+            if (asprintf(&filename, "%s/%s-%s.%s", tables_path, prefix, entry->base_name, ext) == -1)
+                continue;
         }
         else
         {
-            snprintf(filename, sizeof(filename), "%s/%s.%s", tables_path, entry->base_name, ext);
+            if (asprintf(&filename, "%s/%s.%s", tables_path, entry->base_name, ext) == -1)
+                continue;
         }
 
         FILE *f = fopen(filename, "w");
         if (f)
+        {
             fclose(f);
-        else if (operation->debug)
-            perror(filename);
+            if (log)
+                fprintf(log, "Created table file: %s\n", filename);
+        }
+        else if (log)
+            fprintf(log, "Failed to create table file: %s - %s\n", filename, strerror(errno));
+
+        free(filename);
     }
+
+    free(tables_path);
+    if (log)
+        fclose(log);
 }
 
 void create_static_tables(const OP *operation)
 {
-    char tables_path[4096];
-    snprintf(tables_path, sizeof(tables_path), "%s/tables", operation->path);
+    if (!operation || !operation->path || operation->path[0] == '\0')
+        return;
 
-    // Ensure the 'tables/' directory exists
-    if (mkdir(tables_path, 0755) != 0 && errno != EEXIST)
-    {
-        if (operation->debug)
-            perror(tables_path);
-    }
+    FILE *log = operation->debug ? fopen("log.txt", "a") : NULL;
 
-    for (size_t i = 0; i < static_tables_count; ++i)
+    char *tables_path = NULL;
+    if (asprintf(&tables_path, "%s/tables", operation->path) == -1)
+        return;
+
+    int mkdir_result = mkdir(tables_path, 0755);
+    if (mkdir_result != 0 && errno != EEXIST && log)
+        fprintf(log, "Failed to create tables directory: %s - %s\n", tables_path, strerror(errno));
+    else if (mkdir_result == 0 && log)
+        fprintf(log, "Created tables directory: %s\n", tables_path);
+
+    for (size_t i = 0; i < static_tables_count; i++)
     {
-        char filename[4096];
-        snprintf(filename, sizeof(filename), "%s/%s", tables_path, static_tables[i].name);
+        char *filename = NULL;
+        if (asprintf(&filename, "%s/%s", tables_path, static_tables[i].name) == -1)
+            continue;
 
         FILE *f = fopen(filename, "w");
         if (f)
         {
-            fclose(f); // Close immediately after creating an empty file
+            fclose(f);
+            if (log)
+                fprintf(log, "Created static table file: %s\n", filename);
         }
-        else if (operation->debug)
-        {
-            perror(filename); // Print error if debug is enabled
-        }
+        else if (log)
+            fprintf(log, "Failed to create static table file: %s - %s\n", filename, strerror(errno));
+
+        free(filename);
     }
+
+    free(tables_path);
+    if (log)
+        fclose(log);
 }
