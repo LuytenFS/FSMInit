@@ -13,6 +13,7 @@ typedef struct OP
     const char *table_type; // "-tbl" or "-tbm"
     const char *prefix;     // Optional prefix for .tbm (NULL if not used)
     int debug;              // 1 if -debug flag is set, 0 otherwise
+    int dry_run;
 } OP;
 
 /* =======================
