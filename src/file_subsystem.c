@@ -259,6 +259,25 @@ void create_static_tables(const OP *operation)
         free(filename);
     }
 
+    for (size_t i = 0; i < fs_tables_count; i++)
+    {
+        char *filename = NULL;
+        if (asprintf(&filename, "%s/%s", tables_path, fs_tables[i].base_name) == -1)
+            continue;
+
+        FILE *f = fopen(filename, "w");
+        if (f)
+        {
+            fclose(f);
+            if (log)
+                fprintf(log, "Created static table file: %s\n", filename);
+        }
+        else if (log)
+            fprintf(log, "Failed to create static table file: %s - %s\n", filename, strerror(errno));
+
+        free(filename);
+    }
+
     free(tables_path);
     if (log)
         fclose(log);
