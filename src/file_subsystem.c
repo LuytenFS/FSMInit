@@ -123,6 +123,54 @@ const size_t static_tables_count = sizeof(static_tables) / sizeof(static_tables[
    File & Directory Creation
    ===================================== */
 
+static bool path_is_dir(const char *path)
+{
+    struct stat st;
+    if (stat(path, &st) != 0)
+    {
+        return false;
+    }
+    return S_ISDIR(st.st_mode);
+}
+
+bool check_if_mod_structure_exists(const char *base_path)
+{
+    for (size_t i = 0; i < fs_dirs_count; i++)
+    {
+        char *dir_path = NULL;
+        if (asprintf(&dir_path, "%s/%s", base_path, fs_dirs[i].name) == -1)
+            continue;
+
+        if (!path_is_dir(dir_path))
+        {
+            free(dir_path);
+            return false;
+        }
+
+        for (size_t j = 0; j < fs_dirs[i].subdir_count; j++)
+        {
+            char *subdir_path = NULL;
+            if (asprintf(&subdir_path, "%s/%s", dir_path, fs_dirs[i].subdirs[j]) == -1)
+            {
+                free(dir_path);
+                return false;
+            }
+
+            if (!path_is_dir(subdir_path))
+            {
+                free(subdir_path);
+                free(dir_path);
+                return false;
+            }
+
+            free(subdir_path);
+        }
+
+        free(dir_path);
+    }
+    return true;
+}
+
 void create_directories(const OP *operation)
 {
     if (!operation || !operation->path || operation->path[0] == '\0')
