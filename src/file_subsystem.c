@@ -210,6 +210,16 @@ void create_directories(const OP *operation)
         return;
     }
 
+    if (check_if_mod_structure_exists(operation->path))
+    {
+        printf("Mod structure already exists at: %s\n", operation->path);
+        if (log)
+            fprintf(log, "Mod structure already exists at: %s\n", operation->path);
+        if (log)
+            fclose(log);
+        return;
+    }
+
     for (size_t i = 0; i < fs_dirs_count; i++)
     {
         char *dir_path = NULL;
@@ -277,6 +287,16 @@ void create_modular_tables(const OP *operation)
         if (log)
             fprintf(log, "Target path is not writable: %s\n", operation->path);
         printf("Target path is not writable: %s\n", operation->path);
+        if (log)
+            fclose(log);
+        return;
+    }
+
+    if (check_if_mod_structure_exists(operation->path))
+    {
+        printf("Mod structure already exists at: %s\n", operation->path);
+        if (log)
+            fprintf(log, "Mod structure already exists at: %s\n", operation->path);
         if (log)
             fclose(log);
         return;
@@ -352,6 +372,16 @@ void create_static_tables(const OP *operation)
         if (log)
             fprintf(log, "Target path is not writable: %s\n", operation->path);
         printf("Target path is not writable: %s\n", operation->path);
+        if (log)
+            fclose(log);
+        return;
+    }
+
+    if (check_if_mod_structure_exists(operation->path))
+    {
+        printf("Mod structure already exists at: %s\n", operation->path);
+        if (log)
+            fprintf(log, "Mod structure already exists at: %s\n", operation->path);
         if (log)
             fclose(log);
         return;
