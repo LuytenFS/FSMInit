@@ -5,6 +5,14 @@
 #include <sys/stat.h>
 #include <errno.h>
 
+#ifdef _WIN32
+#include <io.h>                                  // for _access
+#define check_writable(p) (_access((p), 2) == 0) // 2 = write check
+#else
+#include <unistd.h> // for access
+#define check_writable(p) (access((p), W_OK) == 0)
+#endif
+
 #include "def_type.h"
 
 /* =====================================
@@ -173,10 +181,34 @@ bool check_if_mod_structure_exists(const char *base_path)
 
 void create_directories(const OP *operation)
 {
+    struct stat st;
+    FILE *log = operation->debug ? fopen("log.txt", "a") : NULL;
+
     if (!operation || !operation->path || operation->path[0] == '\0')
         return;
 
-    FILE *log = operation->debug ? fopen("log.txt", "a") : NULL;
+    if  (stat(operation->path, &st) != 0 || !S_ISDIR(st.st_mode)){
+        if(log)
+        {
+            fprintf(log, "Target path does not exist and or is not a directory: %s\n", operation->path);
+        }
+        printf("Target path does not exist and or is not a directory: %s\n", operation->path);
+        if(log)
+            fclose(log);
+        return;
+    }
+
+    if (!check_writable(operation->path))
+    {
+        if (log)
+        {
+            fprintf(log, "Target path is not writable: %s\n", operation->path);
+        }
+        printf("Target path is not writable: %s\n", operation->path);
+        if (log)
+            fclose(log);
+        return;
+    }
 
     for (size_t i = 0; i < fs_dirs_count; i++)
     {
@@ -220,12 +252,35 @@ void create_directories(const OP *operation)
 
 void create_modular_tables(const OP *operation)
 {
-    if (!operation || !operation->path || operation->path[0] == '\0')
-        return;
-
+    struct stat st;
     FILE *log = operation->debug ? fopen("log.txt", "a") : NULL;
     const char *table_type = operation->table_type ? operation->table_type : "-tbl";
     const char *prefix = operation->prefix ? operation->prefix : "";
+
+    if (!operation || !operation->path || operation->path[0] == '\0')
+        return;
+
+    if (stat(operation->path, &st) != 0 || !S_ISDIR(st.st_mode))
+    {
+        if (log)
+        {
+            fprintf(log, "Target path does not exist and or is not a directory: %s\n", operation->path);
+        }
+        printf("Target path does not exist and or is not a directory: %s\n", operation->path);
+        if (log)
+            fclose(log);
+        return;
+    }
+
+    if (!check_writable(operation->path))
+    {
+        if (log)
+            fprintf(log, "Target path is not writable: %s\n", operation->path);
+        printf("Target path is not writable: %s\n", operation->path);
+        if (log)
+            fclose(log);
+        return;
+    }
 
     char *tables_path = NULL;
     if (asprintf(&tables_path, "%s/tables", operation->path) == -1)
@@ -274,10 +329,33 @@ void create_modular_tables(const OP *operation)
 
 void create_static_tables(const OP *operation)
 {
+    struct stat st;
+    FILE *log = operation->debug ? fopen("log.txt", "a") : NULL;
+
     if (!operation || !operation->path || operation->path[0] == '\0')
         return;
 
-    FILE *log = operation->debug ? fopen("log.txt", "a") : NULL;
+    if (stat(operation->path, &st) != 0 || !S_ISDIR(st.st_mode))
+    {
+        if (log)
+        {
+            fprintf(log, "Target path does not exist and or is not a directory: %s\n", operation->path);
+        }
+        printf("Target path does not exist and or is not a directory: %s\n", operation->path);
+        if (log)
+            fclose(log);
+        return;
+    }
+
+    if (!check_writable(operation->path))
+    {
+        if (log)
+            fprintf(log, "Target path is not writable: %s\n", operation->path);
+        printf("Target path is not writable: %s\n", operation->path);
+        if (log)
+            fclose(log);
+        return;
+    }
 
     char *tables_path = NULL;
     if (asprintf(&tables_path, "%s/tables", operation->path) == -1)
