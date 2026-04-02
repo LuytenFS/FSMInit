@@ -2,6 +2,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <linux/limits.h>
+
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
 
 #include "def_type.h"
 #include "file_subsystem.h"
@@ -79,9 +84,17 @@ int main(int argc, char *argv[])
     operation.debug = 0;
 
     // -----------------------------
+    // Buffer checks
+    // -----------------------------
+    if (strlen(argv[2]) >= PATH_MAX)
+    {
+        fprintf(stderr, "Error: Path is too long. Maximum %d characters.\n", PATH_MAX - 1);
+        return 1;
+    }
+    // -----------------------------
     // Handle optional prefix if -tbm (only for -stdmc)
     // -----------------------------
-    int start_index = is_stdm ? 3 : 4; // argv index where optional args start
+    int start_index = is_stdm ? 3 : 4;
     if (is_stdmc && strcmp(operation.table_type, "-tbm") == 0)
     {
         if (argc < 5)
@@ -89,8 +102,13 @@ int main(int argc, char *argv[])
             fprintf(stderr, "Error: .tbm requires a prefix argument.\n");
             return 1;
         }
+        if (strlen(argv[4]) > 32)
+        {
+            fprintf(stderr, "Error: Prefix is too long. Maximum 32 characters.\n");
+            return 1;
+        }
         operation.prefix = argv[4];
-        start_index = 5; // optional args start after prefix
+        start_index = 5;
     }
 
     // -----------------------------
@@ -127,15 +145,19 @@ int main(int argc, char *argv[])
     // -----------------------------
     // Execute based on command
     // -----------------------------
-    create_directories(&operation); // Pass pointer to operation
+    if (check_if_mod_structure_exists(operation.path))
+    {
+        fprintf(stderr, "Error: Mod structure already exists at: %s\n", operation.path);
+        return 1;
+    }
+
+    create_directories(&operation);
 
     if (is_stdmc)
     {
         create_static_tables(&operation);
 
-        if (strcmp(operation.table_type, "-tbl") == 0)
-            create_modular_tables(&operation);
-        else if (strcmp(operation.table_type, "-tbm") == 0)
+        if (strcmp(operation.table_type, "-tbl") == 0 || strcmp(operation.table_type, "-tbm") == 0)
             create_modular_tables(&operation);
         else
         {

@@ -5,3 +5,4 @@
 void create_directories(const OP *operation);
 void create_modular_tables(const OP *operation);
 void create_static_tables(const OP *operation);
+bool check_if_mod_structure_exists(const char *base_path);
