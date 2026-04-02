@@ -196,7 +196,7 @@ void create_modular_tables(const OP *operation)
 
         if (entry->is_modular && strcmp(table_type, "-tbm") == 0 && prefix[0] != '\0')
         {
-            if (asprintf(&filename, "%s/%s-%s.%s", tables_path, prefix, entry->base_name, ext) == -1)
+            if (asprintf(&filename, "%s/%s%s.%s", tables_path, prefix, entry->modular_suffix, ext) == -1)
                 continue;
         }
         else
