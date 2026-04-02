@@ -117,10 +117,9 @@ int main(int argc, char *argv[])
     for (int i = start_index; i < argc; ++i)
     {
         if (strcmp(argv[i], "-debug") == 0)
-        {
             operation.debug = 1;
-            break;
-        }
+        else if (strcmp(argv[i], "-dry-run") == 0)
+            operation.dry_run = 1;
     }
 
     // -----------------------------
@@ -137,6 +136,7 @@ int main(int argc, char *argv[])
             fprintf(log_file, "Table type    : %s\n", operation.table_type ? operation.table_type : "N/A");
             fprintf(log_file, "Prefix        : %s\n", operation.prefix ? operation.prefix : "N/A");
             fprintf(log_file, "Debug enabled : %d\n", operation.debug);
+            fprintf(log_file, "Dry-run       : %s\n", operation.dry_run ? "enabled" : "disabled");
             fprintf(log_file, "===================\n\n");
             fclose(log_file);
         }
@@ -157,9 +157,9 @@ int main(int argc, char *argv[])
     {
         create_static_tables(&operation);
 
-        if (strcmp(operation.table_type, "-tbl") == 0 || strcmp(operation.table_type, "-tbm") == 0)
+        if (strcmp(operation.table_type, "-tbm") == 0)
             create_modular_tables(&operation);
-        else
+        else if (strcmp(operation.table_type, "-tbl") != 0)
         {
             fprintf(stderr, "Error: Unknown table type '%s'. Use -tbl or -tbm.\n", operation.table_type);
             return 1;
