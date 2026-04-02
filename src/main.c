@@ -131,8 +131,10 @@ int main(int argc, char *argv[])
 
     if (is_stdmc)
     {
+        create_static_tables(&operation);
+
         if (strcmp(operation.table_type, "-tbl") == 0)
-            create_static_tables(&operation);
+            create_modular_tables(&operation);
         else if (strcmp(operation.table_type, "-tbm") == 0)
             create_modular_tables(&operation);
         else

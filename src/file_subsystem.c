@@ -106,15 +106,16 @@ const size_t fs_tables_count = sizeof(fs_tables) / sizeof(fs_tables[0]);
    Static Tables (non-modular)
    ===================================== */
 FS_TABLES static_tables[] = {
-    {"Ai_profiles.tbl"},
-    {"Autopilot.tbl"},
-    {"Colors.tbl"},
-    {"Iff_defs.tbl"},
-    {"Objecttypes.tbl"},
-    {"Species_defs.tbl"},
-    {"Armor.tbl"},
-    {"Controlconfigdefaults.tbl"},
-    {"Scripting.tbl"}};
+    // {"Ai_profiles.tbl"},
+    // {"Autopilot.tbl"},
+    // {"Colors.tbl"},
+    // {"Iff_defs.tbl"},
+    // {"Objecttypes.tbl"},
+    // {"Species_defs.tbl"},
+    // {"Armor.tbl"},
+    // {"Scripting.tbl"},
+    {"Controlconfigdefaults.tbl"}
+};
 
 const size_t static_tables_count = sizeof(static_tables) / sizeof(static_tables[0]);
 
@@ -196,7 +197,7 @@ void create_modular_tables(const OP *operation)
 
         if (entry->is_modular && strcmp(table_type, "-tbm") == 0 && prefix[0] != '\0')
         {
-            if (asprintf(&filename, "%s/%s-%s.%s", tables_path, prefix, entry->base_name, ext) == -1)
+            if (asprintf(&filename, "%s/%s%s.%s", tables_path, prefix, entry->modular_suffix, ext) == -1)
                 continue;
         }
         else
@@ -257,6 +258,28 @@ void create_static_tables(const OP *operation)
             fprintf(log, "Failed to create static table file: %s - %s\n", filename, strerror(errno));
 
         free(filename);
+    }
+
+    if (operation->table_type && strcmp(operation->table_type, "-tbl") == 0)
+    {
+        for (size_t i = 0; i < fs_tables_count; i++)
+        {
+            char *filename = NULL;
+            if (asprintf(&filename, "%s/%s.tbl", tables_path, fs_tables[i].base_name) == -1)
+                continue;
+
+            FILE *f = fopen(filename, "w");
+            if (f)
+            {
+                fclose(f);
+                if (log)
+                    fprintf(log, "Created static table file: %s\n", filename);
+            }
+            else if (log)
+                fprintf(log, "Failed to create static table file: %s - %s\n", filename, strerror(errno));
+
+            free(filename);
+        }
     }
 
     free(tables_path);
