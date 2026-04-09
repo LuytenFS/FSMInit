@@ -4,6 +4,14 @@
 #include <stdbool.h>
 #include <linux/limits.h>
 
+#ifdef _WIN32
+#include <io.h>
+#include <windows.h> // Optional: for SetConsoleMode if needed
+#define isatty _isatty
+#else
+#include <unistd.h>
+#endif
+
 #ifndef PATH_MAX
 #define PATH_MAX 4096
 #endif
@@ -13,25 +21,47 @@
 #include "text_type.h"
 #include "color.h"
 
+bool g_color_enabled = false;
+
 int main(int argc, char *argv[])
 {
+    int tty = isatty(1);
+    if (getenv("NO_COLOR") || getenv("CI"))
+        tty = 0;
+    g_color_enabled = tty;
+
+    OP operation = {0};
+
+    bool is_stdmc = (argc > 1 && strcmp(argv[1], "-stdmc") == 0);
+    bool is_stdm = (argc > 1 && strcmp(argv[1], "-stdm") == 0);
+
+    // -----------------------------
+    // Initialize operation struct
+    // -----------------------------
+    operation.command = argv[1];
+    operation.path = argv[2];
+    operation.table_type = is_stdmc ? argv[3] : NULL;
+    operation.prefix = NULL;
+    operation.debug = 0;
+    operation.color_enabled = tty;
+
     // -----------------------------
     // Check at least one argument
     // -----------------------------
     if (argc < 2)
     {
-        fprintf(stderr, TEX_BOLD COL_YELLOW "Usage:" COL_RESET " <command> <path> <-tbl/-tbm> [prefix if -tbm] [optional -debug]\n");
+        FPRINT_IF_COLOR(stderr, TEX_BOLD COL_YELLOW "Usage:" COL_RESET " <command> <path> <-tbl/-tbm> [prefix if -tbm] [optional -debug]\n");
         return 1;
     }
 
     // -----------------------------
     // Handle -help
     // -----------------------------
-    if (strcmp(argv[1], "-help") == 0)
+    if (argc > 1 && strcmp(argv[1], "-help") == 0)
     {
         if (argc != 2)
         {
-            fprintf(stderr, TEX_BOLD COL_RED "Error:" COL_RESET " The '-help' command cannot have additional arguments.\n");
+            FPRINT_IF_COLOR(stderr, TEX_BOLD COL_RED "Error:" COL_RESET " The '-help' command cannot have additional arguments.\n");
             return 1;
         }
 
@@ -54,12 +84,9 @@ int main(int argc, char *argv[])
     // -----------------------------
     // Determine command type
     // -----------------------------
-    bool is_stdmc = (strcmp(argv[1], "-stdmc") == 0);
-    bool is_stdm = (strcmp(argv[1], "-stdm") == 0);
-
     if (!is_stdmc && !is_stdm)
     {
-        fprintf(stderr, TEX_BOLD COL_RED "Error:" COL_RESET " Unknown command '%s'. Use -help for usage.\n", argv[1]);
+        FPRINT_IF_COLOR(stderr, TEX_BOLD COL_RED "Error:" COL_RESET " Unknown command '%s'. Use -help for usage.\n", argv[1]);
         return 1;
     }
 
@@ -70,28 +97,18 @@ int main(int argc, char *argv[])
     if (argc < min_args)
     {
         if (is_stdm)
-            fprintf(stderr, TEX_BOLD COL_YELLOW "Usage:" COL_RESET " <command> <path> [optional -debug]\n");
+            FPRINT_IF_COLOR(stderr, TEX_BOLD COL_YELLOW "Usage:" COL_RESET " <command> <path> [optional -debug]\n");
         else
-            fprintf(stderr, TEX_BOLD COL_YELLOW "Usage:" COL_RESET " <command> <path> <-tbl/-tbm> [prefix if -tbm] [optional -debug]\n");
+            FPRINT_IF_COLOR(stderr, TEX_BOLD COL_YELLOW "Usage:" COL_RESET " <command> <path> <-tbl/-tbm> [prefix if -tbm] [optional -debug]\n");
         return 1;
     }
-
-    // -----------------------------
-    // Initialize operation struct
-    // -----------------------------
-    OP operation = {0};
-    operation.command = argv[1];
-    operation.path = argv[2];
-    operation.table_type = is_stdmc ? argv[3] : NULL;
-    operation.prefix = NULL;
-    operation.debug = 0;
 
     // -----------------------------
     // Buffer checks
     // -----------------------------
     if (strlen(argv[2]) >= PATH_MAX)
     {
-        fprintf(stderr, TEX_BOLD COL_RED "Error:" COL_RESET " Path is too long. Maximum %d characters.\n", PATH_MAX - 1);
+        FPRINT_IF_COLOR(stderr, TEX_BOLD COL_RED "Error:" COL_RESET " Path is too long. Maximum %d characters.\n", PATH_MAX - 1);
         return 1;
     }
     // -----------------------------
@@ -102,12 +119,12 @@ int main(int argc, char *argv[])
     {
         if (argc < 5)
         {
-            fprintf(stderr, TEX_BOLD COL_RED "Error:" COL_RESET " '.tbm' file extension requires a prefix argument.\n");
+            FPRINT_IF_COLOR(stderr, TEX_BOLD COL_RED "Error:" COL_RESET " '.tbm' file extension requires a prefix argument.\n");
             return 1;
         }
         if (strlen(argv[4]) > 32)
         {
-            fprintf(stderr, TEX_BOLD COL_RED "Error:" COL_RESET " Prefix is too long. Maximum 32 characters.\n");
+            FPRINT_IF_COLOR(stderr, TEX_BOLD COL_RED "Error:" COL_RESET " Prefix is too long. Maximum 32 characters.\n");
             return 1;
         }
         operation.prefix = argv[4];
@@ -150,7 +167,7 @@ int main(int argc, char *argv[])
     // -----------------------------
     if (check_if_mod_structure_exists(operation.path))
     {
-        fprintf(stderr, TEX_BOLD COL_RED "Error:" COL_RESET " Mod structure already exists at: %s\n", operation.path);
+        FPRINT_IF_COLOR(stderr, TEX_BOLD COL_RED "Error:" COL_RESET " Mod structure already exists at: %s\n", operation.path);
         return 1;
     }
 
@@ -164,7 +181,7 @@ int main(int argc, char *argv[])
             create_modular_tables(&operation);
         else if (strcmp(operation.table_type, "-tbl") != 0)
         {
-            fprintf(stderr, TEX_BOLD COL_RED "Error:" COL_RESET " Unknown table type '%s'. Use -tbl or -tbm.\n", operation.table_type);
+            FPRINT_IF_COLOR(stderr, TEX_BOLD COL_RED "Error:" COL_RESET " Unknown table type '%s'. Use -tbl or -tbm.\n", operation.table_type);
             return 1;
         }
     }
