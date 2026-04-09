@@ -10,6 +10,8 @@
 
 #include "def_type.h"
 #include "file_subsystem.h"
+#include "text_type.h"
+#include "color.h"
 
 int main(int argc, char *argv[])
 {
@@ -18,7 +20,7 @@ int main(int argc, char *argv[])
     // -----------------------------
     if (argc < 2)
     {
-        fprintf(stderr, "Usage: <command> <path> <-tbl/-tbm> [prefix if -tbm] [optional -debug]\n");
+        fprintf(stderr, TEX_BOLD COL_YELLOW "Usage:" COL_RESET " <command> <path> <-tbl/-tbm> [prefix if -tbm] [optional -debug]\n");
         return 1;
     }
 
@@ -29,7 +31,7 @@ int main(int argc, char *argv[])
     {
         if (argc != 2)
         {
-            fprintf(stderr, "Error: The -help command cannot have additional arguments.\n");
+            fprintf(stderr, TEX_BOLD COL_RED "Error:" COL_RESET " The '-help' command cannot have additional arguments.\n");
             return 1;
         }
 
@@ -43,7 +45,8 @@ int main(int argc, char *argv[])
             "3. <-tbl/-tbm>     : Specifies whether to create standard .tbl files or modular .tbm files (only for -stdmc).\n\n"
             "4. <prefix>        : Optional prefix for .tbm files. Required only if \"-tbm\" is specified.\n"
             "                     Ignored for \"-tbl\".\n\n"
-            "5. [-debug]        : Optional flag. Enables debug output to \"log.txt\" in the program's current directory.\n");
+            "5. [-debug]        : Optional flag. Enables debug output to \"log.txt\" in the program's current directory.\n"
+            "6. [-dry-run]        : Optional flag. Runs a dry run, in which the program will show what will operate without actually doing so.\n");
 
         return 0;
     }
@@ -56,7 +59,7 @@ int main(int argc, char *argv[])
 
     if (!is_stdmc && !is_stdm)
     {
-        fprintf(stderr, "Error: Unknown command '%s'. Use -help for usage.\n", argv[1]);
+        fprintf(stderr, TEX_BOLD COL_RED "Error:" COL_RESET " Unknown command '%s'. Use -help for usage.\n", argv[1]);
         return 1;
     }
 
@@ -67,9 +70,9 @@ int main(int argc, char *argv[])
     if (argc < min_args)
     {
         if (is_stdm)
-            fprintf(stderr, "Usage: <command> <path> [optional -debug]\n");
+            fprintf(stderr, TEX_BOLD COL_YELLOW "Usage:" COL_RESET " <command> <path> [optional -debug]\n");
         else
-            fprintf(stderr, "Usage: <command> <path> <-tbl/-tbm> [prefix if -tbm] [optional -debug]\n");
+            fprintf(stderr, TEX_BOLD COL_YELLOW "Usage:" COL_RESET " <command> <path> <-tbl/-tbm> [prefix if -tbm] [optional -debug]\n");
         return 1;
     }
 
@@ -88,7 +91,7 @@ int main(int argc, char *argv[])
     // -----------------------------
     if (strlen(argv[2]) >= PATH_MAX)
     {
-        fprintf(stderr, "Error: Path is too long. Maximum %d characters.\n", PATH_MAX - 1);
+        fprintf(stderr, TEX_BOLD COL_RED "Error:" COL_RESET " Path is too long. Maximum %d characters.\n", PATH_MAX - 1);
         return 1;
     }
     // -----------------------------
@@ -99,12 +102,12 @@ int main(int argc, char *argv[])
     {
         if (argc < 5)
         {
-            fprintf(stderr, "Error: .tbm requires a prefix argument.\n");
+            fprintf(stderr, TEX_BOLD COL_RED "Error:" COL_RESET " '.tbm' file extension requires a prefix argument.\n");
             return 1;
         }
         if (strlen(argv[4]) > 32)
         {
-            fprintf(stderr, "Error: Prefix is too long. Maximum 32 characters.\n");
+            fprintf(stderr, TEX_BOLD COL_RED "Error:" COL_RESET " Prefix is too long. Maximum 32 characters.\n");
             return 1;
         }
         operation.prefix = argv[4];
@@ -112,7 +115,7 @@ int main(int argc, char *argv[])
     }
 
     // -----------------------------
-    // Handle optional -debug flag
+    // Handle optional -debug/-dry-run flag
     // -----------------------------
     for (int i = start_index; i < argc; ++i)
     {
@@ -147,7 +150,7 @@ int main(int argc, char *argv[])
     // -----------------------------
     if (check_if_mod_structure_exists(operation.path))
     {
-        fprintf(stderr, "Error: Mod structure already exists at: %s\n", operation.path);
+        fprintf(stderr, TEX_BOLD COL_RED "Error:" COL_RESET " Mod structure already exists at: %s\n", operation.path);
         return 1;
     }
 
@@ -161,7 +164,7 @@ int main(int argc, char *argv[])
             create_modular_tables(&operation);
         else if (strcmp(operation.table_type, "-tbl") != 0)
         {
-            fprintf(stderr, "Error: Unknown table type '%s'. Use -tbl or -tbm.\n", operation.table_type);
+            fprintf(stderr, TEX_BOLD COL_RED "Error:" COL_RESET " Unknown table type '%s'. Use -tbl or -tbm.\n", operation.table_type);
             return 1;
         }
     }
