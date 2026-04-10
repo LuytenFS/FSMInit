@@ -9,7 +9,8 @@ FSMInit is an automation tool designed to simplify the creation of directories a
    The operation to perform. Allowed values:  
    - `-stdm`    : Standard Mod (no tables)  
    - `-stdmc`   : Standard Mod Complex (with tables)  
-   - `-help`    : Display usage information  
+   - `-help`    : Display usage information
+   - `-version` : Displays the current version of the program
 
 2. **`<path>`**  
    The directory path where the tool will create directories and tables.  
