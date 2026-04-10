@@ -10,7 +10,7 @@ jobs:
   tidy:
     strategy:
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04, macos-13, macos-14, windows-2022]
+        os: [ubuntu-22.04, ubuntu-24.04, macos-15, macos-15-intel, windows-2022]
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -22,7 +22,9 @@ jobs:
 
       - name: Install clang-tidy (macOS)
         if: runner.os == 'macOS'
-        run: brew install llvm && echo "$(brew --prefix llvm)/bin" >> $GITHUB_PATH
+        run: |
+          brew install llvm
+          echo "$(brew --prefix llvm)/bin" >> $GITHUB_PATH
 
       - name: Install clang-tidy (Windows)
         if: runner.os == 'Windows'
@@ -34,7 +36,7 @@ jobs:
 
       - name: Configure (Windows)
         if: runner.os == 'Windows'
-        run: cmake -B build/debug -DCMAKE_BUILD_TYPE=Debug -DCLANG_TIDY_EXE="C:/Program Files/LLVM/bin/clang-tidy.exe"
+        run: cmake -B build/debug -DCMAKE_BUILD_TYPE=Debug -DCLANG_TIDY_EXE=$(where clang-tidy)
 
       - name: Build
         run: cmake --build build/debug
