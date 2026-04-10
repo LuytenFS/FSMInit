@@ -1,0 +1,43 @@
+name: clang-tidy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  tidy:
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, macos-13, macos-14, windows-2022]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install clang-tidy (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y clang-tidy
+
+      - name: Install clang-tidy (macOS)
+        if: runner.os == 'macOS'
+        run: brew install llvm && echo "$(brew --prefix llvm)/bin" >> $GITHUB_PATH
+
+      - name: Install clang-tidy (Windows)
+        if: runner.os == 'Windows'
+        run: choco install llvm --yes
+
+      - name: Configure (Unix)
+        if: runner.os != 'Windows'
+        run: cmake -B build/debug -DCMAKE_BUILD_TYPE=Debug -DCLANG_TIDY_EXE=$(which clang-tidy)
+
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        run: cmake -B build/debug -DCMAKE_BUILD_TYPE=Debug -DCLANG_TIDY_EXE="C:/Program Files/LLVM/bin/clang-tidy.exe"
+
+      - name: Build
+        run: cmake --build build/debug
+
+      - name: Run clang-tidy
+        run: cmake --build build/debug --target tidy

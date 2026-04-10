@@ -129,7 +129,7 @@ int main(int argc, char *argv[])
     // Handle optional prefix if -tbm
     // -----------------------------
     int start_index = is_stdm ? 3 : 4;
-    if (is_stdmc && strcmp(operation.table_type, "-tbm") == 0)
+    if (is_stdmc && operation.table_type && strcmp(operation.table_type, "-tbm") == 0)
     {
         if (argc < 5)
         {
@@ -152,9 +152,10 @@ int main(int argc, char *argv[])
     // -----------------------------
     for (int i = start_index; i < argc; ++i)
     {
-        if (strcmp(argv[i], "-debug") == 0)
+        /* These cannot ever be null */
+        if (strcmp(argv[i], "-debug") == 0) // NOLINT(clang-analyzer-core.NonNullParamChecker)
             operation.debug = 1;
-        else if (strcmp(argv[i], "-dry-run") == 0)
+        else if (strcmp(argv[i], "-dry-run") == 0) // NOLINT(clang-analyzer-core.NonNullParamChecker)
             operation.dry_run = 1;
     }
 
@@ -194,9 +195,9 @@ int main(int argc, char *argv[])
     {
         create_static_tables(&operation);
 
-        if (strcmp(operation.table_type, "-tbm") == 0)
+        if (operation.table_type && strcmp(operation.table_type, "-tbm") == 0)
             create_modular_tables(&operation);
-        else if (strcmp(operation.table_type, "-tbl") != 0)
+        else if (operation.table_type && strcmp(operation.table_type, "-tbl") != 0)
         {
             fprintf(stderr, "%s%sError:%s Unknown table type '%s'. Use -tbl or -tbm.\n",
                     TEX_BOLD, COL_RED, COL_RESET, operation.table_type);
