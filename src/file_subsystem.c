@@ -207,28 +207,12 @@ static void ensure_tables_dir(OP *operation)
     if (!operation->dry_run)
     {
         int mkdir_result = mkdir(tables_path, 0755);
-        if (mkdir_result != 0 && errno != EEXIST)
-        {
-            if (log)
-                fprintf(log, "Error: Failed to create tables directory: %s - %s\n", tables_path, strerror(errno));
-            fprintf(stderr, "%s%sError:%s Failed to create tables directory: %s - %s\n",
-                    TEX_BOLD, COL_RED, COL_RESET, tables_path, strerror(errno));
-            operation->errors++;
-        }
-        else if (mkdir_result == 0)
-        {
-            if (log)
-                fprintf(log, "Success: Created tables directory: %s\n", tables_path);
-            printf("%s%sSuccess:%s Created tables directory: %s\n",
-                   TEX_BOLD, COL_GREEN, COL_RESET, tables_path);
+        if (mkdir_result == 0)
+        { 
             operation->dirs_created++;
         }
     }
-    else
-    {
-        printf("%s[dry-run]%s Would create tables directory: %s\n", COL_YELLOW, COL_RESET, tables_path);
-        operation->dirs_created++;
-    }
+    // SILENCE - tables/ handled by create_directories()
 
     free(tables_path);
     if (log)
