@@ -205,5 +205,27 @@ int main(int argc, char *argv[])
         }
     }
 
+    // -----------------------------
+    // Summary
+    // -----------------------------
+    printf("\n%s%s--- Summary ---%s\n", TEX_BOLD, COL_CYAN, COL_RESET);
+    printf("  Directories : %d\n", operation.dirs_created);
+    printf("  Tables      : %d\n", operation.tables_created);
+    printf("  Errors      : %d\n", operation.errors);
+
+    if (operation.debug)
+    {
+        FILE *log_file = fopen("log.txt", "a");
+        if (log_file)
+        {
+            fprintf(log_file, "=== Summary ===\n");
+            fprintf(log_file, "Directories : %d\n", operation.dirs_created);
+            fprintf(log_file, "Tables      : %d\n", operation.tables_created);
+            fprintf(log_file, "Errors      : %d\n", operation.errors);
+            fprintf(log_file, "===============\n\n");
+            fclose(log_file);
+        }
+    }
+
     return 0;
 }

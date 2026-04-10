@@ -14,6 +14,11 @@ typedef struct OP
     const char *prefix;     // Optional prefix for .tbm (NULL if not used)
     int debug;              // 1 if -debug flag is set, 0 otherwise
     int dry_run;
+
+    /* Counters */
+    int dirs_created;
+    int tables_created;
+    int errors;
 } OP;
 
 /* =======================
