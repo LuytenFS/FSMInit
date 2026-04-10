@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <sys/stat.h>
 #include <errno.h>
@@ -85,7 +86,7 @@ FS_DIRECTORIES fs_dirs[] = {
     {"text", NULL, 0},
     {"voice", voice_subdirs, voice_subdirs_count}};
 
-const size_t fs_dirs_count = sizeof(fs_dirs) / sizeof(fs_dirs[0]);
+const size_t fs_dirs_count = 28;
 
 /* =====================================
    Modular Tables (.tbl / .tbm)
@@ -131,7 +132,7 @@ FS_TABLE_ENTRY fs_tables[] = {
     {"weapon_expl", "tbl", false, "-wxp"},
     {"particle_effects", "tbl", true, "-part"}};
 
-const size_t fs_tables_count = sizeof(fs_tables) / sizeof(fs_tables[0]);
+const size_t fs_tables_count = 42;
 
 /* =====================================
    Static Tables (non-modular)
@@ -147,7 +148,7 @@ FS_TABLES static_tables[] = {
     // {"Scripting.tbl"},
     {"Controlconfigdefaults.tbl"}};
 
-const size_t static_tables_count = sizeof(static_tables) / sizeof(static_tables[0]);
+const size_t static_tables_count = 1;
 
 /* =====================================
    File & Directory Creation
