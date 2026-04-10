@@ -2,7 +2,15 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
-#include <linux/limits.h>
+#include <limits.h>
+
+#ifdef _WIN32
+#include <io.h>
+#include <windows.h>
+#define isatty _isatty
+#else
+#include <unistd.h>
+#endif
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
@@ -11,17 +19,42 @@
 #include "version.h"
 #include "def_type.h"
 #include "file_subsystem.h"
+#include "text_type.h"
+#include "color.h"
+
+bool g_color_enabled = false;
 
 int main(int argc, char *argv[])
 {
+    int tty = isatty(1);
+    if (getenv("NO_COLOR") || getenv("CI"))
+        tty = 0;
+    g_color_enabled = tty;
+
+    OP operation = {0};
+
+    bool is_stdmc = (argc > 1 && strcmp(argv[1], "-stdmc") == 0);
+    bool is_stdm = (argc > 1 && strcmp(argv[1], "-stdm") == 0);
+
     // -----------------------------
     // Check at least one argument
     // -----------------------------
     if (argc < 2)
     {
-        fprintf(stderr, "Usage: <command> <path> <-tbl/-tbm> [prefix if -tbm] [optional -debug]\n");
+        fprintf(stderr, "%s%sUsage:%s <command> <path> <-tbl/-tbm> [prefix if -tbm] [optional -debug]\n",
+                TEX_BOLD, COL_YELLOW, COL_RESET);
         return 1;
     }
+
+    // -----------------------------
+    // Initialize operation struct
+    // -----------------------------
+    operation.command = argv[1];
+    operation.path = argc > 2 ? argv[2] : NULL;
+    operation.table_type = is_stdmc && argc > 3 ? argv[3] : NULL;
+    operation.prefix = NULL;
+    operation.debug = 0;
+    operation.dry_run = 0;
 
     // -----------------------------
     // Handle -help
@@ -30,7 +63,8 @@ int main(int argc, char *argv[])
     {
         if (argc != 2)
         {
-            fprintf(stderr, "Error: The -help command cannot have additional arguments.\n");
+            fprintf(stderr, "%s%sError:%s The '-help' command cannot have additional arguments.\n",
+                    TEX_BOLD, COL_RED, COL_RESET);
             return 1;
         }
 
@@ -44,7 +78,8 @@ int main(int argc, char *argv[])
             "3. <-tbl/-tbm>     : Specifies whether to create standard .tbl files or modular .tbm files (only for -stdmc).\n\n"
             "4. <prefix>        : Optional prefix for .tbm files. Required only if \"-tbm\" is specified.\n"
             "                     Ignored for \"-tbl\".\n\n"
-            "5. [-debug]        : Optional flag. Enables debug output to \"log.txt\" in the program's current directory.\n");
+            "5. [-debug]        : Optional flag. Enables debug output to \"log.txt\" in the program's current directory.\n"
+            "6. [-dry-run]      : Optional flag. Runs a dry run, showing what would happen without doing it.\n");
 
         return 0;
     }
@@ -58,60 +93,54 @@ int main(int argc, char *argv[])
     // -----------------------------
     // Determine command type
     // -----------------------------
-    bool is_stdmc = (strcmp(argv[1], "-stdmc") == 0);
-    bool is_stdm = (strcmp(argv[1], "-stdm") == 0);
-
     if (!is_stdmc && !is_stdm)
     {
-        fprintf(stderr, "Error: Unknown command '%s'. Use -help for usage.\n", argv[1]);
+        fprintf(stderr, "%s%sError:%s Unknown command '%s'. Use -help for usage.\n",
+                TEX_BOLD, COL_RED, COL_RESET, argv[1]);
         return 1;
     }
 
     // -----------------------------
     // Validate argument count
     // -----------------------------
-    int min_args = is_stdm ? 2 + 1 : 3 + 1; // command+path or command+path+table_type
+    int min_args = is_stdm ? 3 : 4;
     if (argc < min_args)
     {
         if (is_stdm)
-            fprintf(stderr, "Usage: <command> <path> [optional -debug]\n");
+            fprintf(stderr, "%s%sUsage:%s <command> <path> [optional -debug]\n",
+                    TEX_BOLD, COL_YELLOW, COL_RESET);
         else
-            fprintf(stderr, "Usage: <command> <path> <-tbl/-tbm> [prefix if -tbm] [optional -debug]\n");
+            fprintf(stderr, "%s%sUsage:%s <command> <path> <-tbl/-tbm> [prefix if -tbm] [optional -debug]\n",
+                    TEX_BOLD, COL_YELLOW, COL_RESET);
         return 1;
     }
-
-    // -----------------------------
-    // Initialize operation struct
-    // -----------------------------
-    OP operation = {0};
-    operation.command = argv[1];
-    operation.path = argv[2];
-    operation.table_type = is_stdmc ? argv[3] : NULL;
-    operation.prefix = NULL;
-    operation.debug = 0;
 
     // -----------------------------
     // Buffer checks
     // -----------------------------
     if (strlen(argv[2]) >= PATH_MAX)
     {
-        fprintf(stderr, "Error: Path is too long. Maximum %d characters.\n", PATH_MAX - 1);
+        fprintf(stderr, "%s%sError:%s Path is too long. Maximum %d characters.\n",
+                TEX_BOLD, COL_RED, COL_RESET, PATH_MAX - 1);
         return 1;
     }
+
     // -----------------------------
-    // Handle optional prefix if -tbm (only for -stdmc)
+    // Handle optional prefix if -tbm
     // -----------------------------
     int start_index = is_stdm ? 3 : 4;
     if (is_stdmc && strcmp(operation.table_type, "-tbm") == 0)
     {
         if (argc < 5)
         {
-            fprintf(stderr, "Error: .tbm requires a prefix argument.\n");
+            fprintf(stderr, "%s%sError:%s '.tbm' file extension requires a prefix argument.\n",
+                    TEX_BOLD, COL_RED, COL_RESET);
             return 1;
         }
         if (strlen(argv[4]) > 32)
         {
-            fprintf(stderr, "Error: Prefix is too long. Maximum 32 characters.\n");
+            fprintf(stderr, "%s%sError:%s Prefix is too long. Maximum 32 characters.\n",
+                    TEX_BOLD, COL_RED, COL_RESET);
             return 1;
         }
         operation.prefix = argv[4];
@@ -119,7 +148,7 @@ int main(int argc, char *argv[])
     }
 
     // -----------------------------
-    // Handle optional -debug flag
+    // Handle optional -debug/-dry-run
     // -----------------------------
     for (int i = start_index; i < argc; ++i)
     {
@@ -154,7 +183,8 @@ int main(int argc, char *argv[])
     // -----------------------------
     if (check_if_mod_structure_exists(operation.path))
     {
-        fprintf(stderr, "Error: Mod structure already exists at: %s\n", operation.path);
+        fprintf(stderr, "%s%sError:%s Mod structure already exists at: %s\n",
+                TEX_BOLD, COL_RED, COL_RESET, operation.path);
         return 1;
     }
 
@@ -168,7 +198,8 @@ int main(int argc, char *argv[])
             create_modular_tables(&operation);
         else if (strcmp(operation.table_type, "-tbl") != 0)
         {
-            fprintf(stderr, "Error: Unknown table type '%s'. Use -tbl or -tbm.\n", operation.table_type);
+            fprintf(stderr, "%s%sError:%s Unknown table type '%s'. Use -tbl or -tbm.\n",
+                    TEX_BOLD, COL_RED, COL_RESET, operation.table_type);
             return 1;
         }
     }
