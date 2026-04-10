@@ -132,7 +132,7 @@ FS_TABLE_ENTRY fs_tables[] = {
     {"weapon_expl", "tbl", false, "-wxp"},
     {"particle_effects", "tbl", true, "-part"}};
 
-const size_t fs_tables_count = 42;
+const size_t fs_tables_count = 39;
 
 /* =====================================
    Static Tables (non-modular)
