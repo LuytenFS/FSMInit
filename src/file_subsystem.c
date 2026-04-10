@@ -8,6 +8,27 @@
 #ifdef _WIN32
 #include <io.h>
 #define check_writable(p) (_access((p), 2) == 0)
+#include <direct.h>
+#define mkdir(path, mode) _mkdir(path)
+#define S_ISDIR(m) (((m) & _S_IFDIR) != 0)
+#define asprintf(buf, fmt, ...) _asprintf(buf, fmt, __VA_ARGS__)
+static int _asprintf(char **ret, const char *format, ...)
+{
+    va_list ap;
+    int size;
+    va_start(ap, format);
+    size = vsnprintf(NULL, 0, format, ap);
+    va_end(ap);
+    if (size < 0)
+        return -1;
+    *ret = malloc(size + 1);
+    if (!*ret)
+        return -1;
+    va_start(ap, format);
+    size = vsnprintf(*ret, size + 1, format, ap);
+    va_end(ap);
+    return size;
+}
 #else
 #include <unistd.h>
 #define check_writable(p) (access((p), W_OK) == 0)
