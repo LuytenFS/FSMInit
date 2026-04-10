@@ -13,7 +13,7 @@
 #define mkdir(path, mode) _mkdir(path)
 #define S_ISDIR(m) (((m) & _S_IFDIR) != 0)
 #define asprintf(buf, fmt, ...) _asprintf(buf, fmt, __VA_ARGS__)
-static int _asprintf(char **ret, const char *format, ...)
+    static int _asprintf(char **ret, const char *format, ...)
 {
     va_list ap;
     int size;
@@ -240,10 +240,12 @@ void create_directories(OP *operation)
 
         if (operation->dry_run)
         {
+            if (log)
+                fprintf(log, "Dry-run: Would create directory: %s\n", dir_path);
             printf("%s[dry-run]%s Would create directory: %s\n",
                    COL_YELLOW, COL_RESET, dir_path);
             operation->dirs_created++;
-        }        
+        }
         else
         {
             int mkdir_result = mkdir(dir_path, 0755);
@@ -273,6 +275,8 @@ void create_directories(OP *operation)
 
             if (operation->dry_run)
             {
+                if (log)
+                    fprintf(log, "Dry-run: Would create subdirectory: %s\n", subdir_path);
                 printf("%s[dry-run]%s Would create subdirectory: %s\n",
                        COL_YELLOW, COL_RESET, subdir_path);
                 operation->dirs_created++;
@@ -386,6 +390,8 @@ void create_modular_tables(OP *operation)
 
         if (operation->dry_run)
         {
+            if (log)
+                fprintf(log, "Dry-run: Would create file: %s\n", filename);
             printf("%s[dry-run]%s Would create file: %s\n",
                    COL_YELLOW, COL_RESET, filename);
             operation->tables_created++;
@@ -485,6 +491,8 @@ void create_static_tables(OP *operation)
 
         if (operation->dry_run)
         {
+            if (log)
+                fprintf(log, "Dry-run: Would create file: %s\n", filename);
             printf("%s[dry-run]%s Would create file: %s\n",
                    COL_YELLOW, COL_RESET, filename);
             operation->tables_created++;
@@ -524,6 +532,8 @@ void create_static_tables(OP *operation)
 
             if (operation->dry_run)
             {
+                if (log)
+                    fprintf(log, "Dry-run: Would create file: %s\n", filename);
                 printf("%s[dry-run]%s Would create file: %s\n",
                        COL_YELLOW, COL_RESET, filename);
                 operation->tables_created++;
