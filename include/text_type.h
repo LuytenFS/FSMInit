@@ -1,13 +1,17 @@
 #pragma once
 
+#include <stdbool.h>
+
 /* =====================================
-   Bright Background Colors
+   Text Types
    ===================================== */
 
-#define TEX_BOLD "\033[1m"
-#define TEX_DIM "\033[2m"
-#define TEX_ITALIC "\033[3m" /* not universally supported */
-#define TEX_UNDERLINE "\033[4m"
-#define TEX_BLINK "\033[5m"   /* use sparingly / avoid */
-#define TEX_REVERSE "\033[7m" /* swaps fg and bg */
-#define TEX_STRIKE "\033[9m"
+extern bool g_color_enabled;
+
+#define TEX_BOLD (g_color_enabled ? "\033[1m" : "")
+#define TEX_DIM (g_color_enabled ? "\033[2m" : "")
+#define TEX_ITALIC (g_color_enabled ? "\033[3m" : "")
+#define TEX_UNDERLINE (g_color_enabled ? "\033[4m" : "")
+#define TEX_BLINK (g_color_enabled ? "\033[5m" : "")
+#define TEX_REVERSE (g_color_enabled ? "\033[7m" : "")
+#define TEX_STRIKE (g_color_enabled ? "\033[9m" : "")

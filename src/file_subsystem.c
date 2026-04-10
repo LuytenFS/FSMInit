@@ -190,7 +190,8 @@ void create_directories(const OP *operation)
     {
         if (log)
             fprintf(log, "Error: Target path does not exist and or is not a directory: %s\n", operation->path);
-        printf(TEX_BOLD COL_RED "Error:" COL_RESET " Target path does not exist and or is not a directory: %s\n", operation->path);
+        fprintf(stderr, "%s%sError:%s Target path does not exist and or is not a directory: %s\n",
+                TEX_BOLD, COL_RED, COL_RESET, operation->path);
         if (log)
             fclose(log);
         return;
@@ -200,7 +201,8 @@ void create_directories(const OP *operation)
     {
         if (log)
             fprintf(log, "Error: Target path is not writable: %s\n", operation->path);
-        PRINTF_IF_COLOR(TEX_BOLD COL_RED "Error:" COL_RESET " Target path is not writable: %s\n", operation->path);
+        fprintf(stderr, "%s%sError:%s Target path is not writable: %s\n",
+                TEX_BOLD, COL_RED, COL_RESET, operation->path);
         if (log)
             fclose(log);
         return;
@@ -213,7 +215,8 @@ void create_directories(const OP *operation)
             continue;
 
         if (operation->dry_run)
-            PRINTF_IF_COLOR(TEX_BOLD COL_YELLOW "[dry-run]" COL_RESET " Would create directory: %s\n", dir_path);
+            printf("%s[dry-run]%s Would create directory: %s\n",
+                   COL_YELLOW, COL_RESET, dir_path);
         else
         {
             int mkdir_result = mkdir(dir_path, 0755);
@@ -221,13 +224,15 @@ void create_directories(const OP *operation)
             {
                 if (log)
                     fprintf(log, "Error: Failed to create directory: %s - %s\n", dir_path, strerror(errno));
-                PRINTF_IF_COLOR(TEX_BOLD COL_RED "Error:" COL_RESET " Failed to create directory: %s - %s\n", dir_path, strerror(errno));
+                fprintf(stderr, "%s%sError:%s Failed to create directory: %s - %s\n",
+                        TEX_BOLD, COL_RED, COL_RESET, dir_path, strerror(errno));
             }
             else
             {
                 if (log)
                     fprintf(log, "Success: Created directory: %s\n", dir_path);
-                PRINTF_IF_COLOR(TEX_BOLD COL_GREEN "Success:" COL_RESET " Created directory: %s\n", dir_path);
+                printf("%s%sSuccess:%s Created directory: %s\n",
+                       TEX_BOLD, COL_GREEN, COL_RESET, dir_path);
             }
         }
 
@@ -238,7 +243,8 @@ void create_directories(const OP *operation)
                 continue;
 
             if (operation->dry_run)
-                PRINTF_IF_COLOR(TEX_BOLD COL_YELLOW "[dry-run]" COL_RESET " Would create subdirectory: %s\n", subdir_path);
+                printf("%s[dry-run]%s Would create subdirectory: %s\n",
+                       COL_YELLOW, COL_RESET, subdir_path);
             else
             {
                 int sub_mkdir_result = mkdir(subdir_path, 0755);
@@ -246,13 +252,15 @@ void create_directories(const OP *operation)
                 {
                     if (log)
                         fprintf(log, "Error: Failed to create subdirectory: %s - %s\n", subdir_path, strerror(errno));
-                    PRINTF_IF_COLOR(TEX_BOLD COL_RED "Error:" COL_RESET " Failed to create subdirectory: %s - %s\n", subdir_path, strerror(errno));
+                    fprintf(stderr, "%s%sError:%s Failed to create subdirectory: %s - %s\n",
+                            TEX_BOLD, COL_RED, COL_RESET, subdir_path, strerror(errno));
                 }
                 else
                 {
                     if (log)
                         fprintf(log, "Success: Created subdirectory: %s\n", subdir_path);
-                    PRINTF_IF_COLOR(TEX_BOLD COL_GREEN "Success:" COL_RESET " Created subdirectory: %s\n", subdir_path);
+                    printf("%s%sSuccess:%s Created subdirectory: %s\n",
+                           TEX_BOLD, COL_GREEN, COL_RESET, subdir_path);
                 }
             }
 
@@ -280,7 +288,8 @@ void create_modular_tables(const OP *operation)
     {
         if (log)
             fprintf(log, "Error: Target path does not exist and or is not a directory: %s\n", operation->path);
-        PRINTF_IF_COLOR(TEX_BOLD COL_RED "Error:" COL_RESET " Target path does not exist and or is not a directory: %s\n", operation->path);
+        fprintf(stderr, "%s%sError:%s Target path does not exist and or is not a directory: %s\n",
+                TEX_BOLD, COL_RED, COL_RESET, operation->path);
         if (log)
             fclose(log);
         return;
@@ -290,7 +299,8 @@ void create_modular_tables(const OP *operation)
     {
         if (log)
             fprintf(log, "Error: Target path is not writable: %s\n", operation->path);
-        PRINTF_IF_COLOR(TEX_BOLD COL_RED "Error:" COL_RESET " Target path is not writable: %s\n", operation->path);
+        fprintf(stderr, "%s%sError:%s Target path is not writable: %s\n",
+                TEX_BOLD, COL_RED, COL_RESET, operation->path);
         if (log)
             fclose(log);
         return;
@@ -307,13 +317,15 @@ void create_modular_tables(const OP *operation)
         {
             if (log)
                 fprintf(log, "Error: Failed to create tables directory: %s - %s\n", tables_path, strerror(errno));
-            PRINTF_IF_COLOR(TEX_BOLD COL_RED "Error:" COL_RESET " Failed to create tables directory: %s - %s\n", tables_path, strerror(errno));
+            fprintf(stderr, "%s%sError:%s Failed to create tables directory: %s - %s\n",
+                    TEX_BOLD, COL_RED, COL_RESET, tables_path, strerror(errno));
         }
         else if (mkdir_result == 0)
         {
             if (log)
                 fprintf(log, "Success: Created tables directory: %s\n", tables_path);
-            PRINTF_IF_COLOR(TEX_BOLD COL_GREEN "Success:" COL_RESET " Created tables directory: %s\n", tables_path);
+            printf("%s%sSuccess:%s Created tables directory: %s\n",
+                   TEX_BOLD, COL_GREEN, COL_RESET, tables_path);
         }
     }
 
@@ -335,7 +347,8 @@ void create_modular_tables(const OP *operation)
         }
 
         if (operation->dry_run)
-            PRINTF_IF_COLOR(TEX_BOLD COL_YELLOW "[dry-run]" COL_RESET " Would create file: %s\n", filename);
+            printf("%s[dry-run]%s Would create file: %s\n",
+                   COL_YELLOW, COL_RESET, filename);
         else
         {
             FILE *f = fopen(filename, "w");
@@ -344,13 +357,15 @@ void create_modular_tables(const OP *operation)
                 fclose(f);
                 if (log)
                     fprintf(log, "Success: Created table file: %s\n", filename);
-                PRINTF_IF_COLOR(TEX_BOLD COL_GREEN "Success:" COL_RESET " Created table file: %s\n", filename);
+                printf("%s%sSuccess:%s Created table file: %s\n",
+                       TEX_BOLD, COL_GREEN, COL_RESET, filename);
             }
             else
             {
                 if (log)
                     fprintf(log, "Error: Failed to create table file: %s - %s\n", filename, strerror(errno));
-                PRINTF_IF_COLOR(TEX_BOLD COL_RED "Error:" COL_RESET " Failed to create table file: %s - %s\n", filename, strerror(errno));
+                fprintf(stderr, "%s%sError:%s Failed to create table file: %s - %s\n",
+                        TEX_BOLD, COL_RED, COL_RESET, filename, strerror(errno));
             }
         }
 
@@ -374,7 +389,8 @@ void create_static_tables(const OP *operation)
     {
         if (log)
             fprintf(log, "Error: Target path does not exist and or is not a directory: %s\n", operation->path);
-        PRINTF_IF_COLOR(TEX_BOLD COL_RED "Error:" COL_RESET " Target path does not exist and or is not a directory: %s\n", operation->path);
+        fprintf(stderr, "%s%sError:%s Target path does not exist and or is not a directory: %s\n",
+                TEX_BOLD, COL_RED, COL_RESET, operation->path);
         if (log)
             fclose(log);
         return;
@@ -384,7 +400,8 @@ void create_static_tables(const OP *operation)
     {
         if (log)
             fprintf(log, "Error: Target path is not writable: %s\n", operation->path);
-        PRINTF_IF_COLOR(TEX_BOLD COL_RED "Error:" COL_RESET " Target path is not writable: %s\n", operation->path);
+        fprintf(stderr, "%s%sError:%s Target path is not writable: %s\n",
+                TEX_BOLD, COL_RED, COL_RESET, operation->path);
         if (log)
             fclose(log);
         return;
@@ -401,13 +418,15 @@ void create_static_tables(const OP *operation)
         {
             if (log)
                 fprintf(log, "Error: Failed to create tables directory: %s - %s\n", tables_path, strerror(errno));
-            PRINTF_IF_COLOR(TEX_BOLD COL_RED "Error:" COL_RESET " Failed to create tables directory: %s - %s\n", tables_path, strerror(errno));
+            fprintf(stderr, "%s%sError:%s Failed to create tables directory: %s - %s\n",
+                    TEX_BOLD, COL_RED, COL_RESET, tables_path, strerror(errno));
         }
         else if (mkdir_result == 0)
         {
             if (log)
                 fprintf(log, "Success: Created tables directory: %s\n", tables_path);
-            PRINTF_IF_COLOR(TEX_BOLD COL_GREEN "Success:" COL_RESET " Created tables directory: %s\n", tables_path);
+            printf("%s%sSuccess:%s Created tables directory: %s\n",
+                   TEX_BOLD, COL_GREEN, COL_RESET, tables_path);
         }
     }
 
@@ -418,7 +437,8 @@ void create_static_tables(const OP *operation)
             continue;
 
         if (operation->dry_run)
-            PRINTF_IF_COLOR(TEX_BOLD COL_YELLOW "[dry-run]" COL_RESET " Would create file: %s\n", filename);
+            printf("%s[dry-run]%s Would create file: %s\n",
+                   COL_YELLOW, COL_RESET, filename);
         else
         {
             FILE *f = fopen(filename, "w");
@@ -427,13 +447,15 @@ void create_static_tables(const OP *operation)
                 fclose(f);
                 if (log)
                     fprintf(log, "Success: Created static table file: %s\n", filename);
-                PRINTF_IF_COLOR(TEX_BOLD COL_GREEN "Success:" COL_RESET " Created static table file: %s\n", filename);
+                printf("%s%sSuccess:%s Created static table file: %s\n",
+                       TEX_BOLD, COL_GREEN, COL_RESET, filename);
             }
             else
             {
                 if (log)
                     fprintf(log, "Error: Failed to create static table file: %s - %s\n", filename, strerror(errno));
-                PRINTF_IF_COLOR(TEX_BOLD COL_RED "Error:" COL_RESET " Failed to create static table file: %s - %s\n", filename, strerror(errno));
+                fprintf(stderr, "%s%sError:%s Failed to create static table file: %s - %s\n",
+                        TEX_BOLD, COL_RED, COL_RESET, filename, strerror(errno));
             }
         }
 
@@ -449,7 +471,8 @@ void create_static_tables(const OP *operation)
                 continue;
 
             if (operation->dry_run)
-                PRINTF_IF_COLOR(TEX_BOLD COL_YELLOW "[dry-run]" COL_RESET " Would create file: %s\n", filename);
+                printf("%s[dry-run]%s Would create file: %s\n",
+                       COL_YELLOW, COL_RESET, filename);
             else
             {
                 FILE *f = fopen(filename, "w");
@@ -458,13 +481,15 @@ void create_static_tables(const OP *operation)
                     fclose(f);
                     if (log)
                         fprintf(log, "Success: Created static table file: %s\n", filename);
-                    PRINTF_IF_COLOR(TEX_BOLD COL_GREEN "Success:" COL_RESET " Created static table file: %s\n", filename);
+                    printf("%s%sSuccess:%s Created static table file: %s\n",
+                           TEX_BOLD, COL_GREEN, COL_RESET, filename);
                 }
                 else
                 {
                     if (log)
                         fprintf(log, "Error: Failed to create static table file: %s - %s\n", filename, strerror(errno));
-                    PRINTF_IF_COLOR(TEX_BOLD COL_RED "Error:" COL_RESET " Failed to create static table file: %s - %s\n", filename, strerror(errno));
+                    fprintf(stderr, "%s%sError:%s Failed to create static table file: %s - %s\n",
+                            TEX_BOLD, COL_RED, COL_RESET, filename, strerror(errno));
                 }
             }
 
