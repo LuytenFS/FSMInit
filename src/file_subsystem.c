@@ -1,3 +1,4 @@
+/* file_subsystem.c */
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -86,7 +87,7 @@ FS_DIRECTORIES fs_dirs[] = {
     {"text", NULL, 0},
     {"voice", (const char **)voice_subdirs, 6}};
 
-const size_t fs_dirs_count = 28;
+const size_t fs_dirs_count = 29;
 
 /* =====================================
    Modular Tables (.tbl / .tbm)
@@ -132,20 +133,12 @@ FS_TABLE_ENTRY fs_tables[] = {
     {"weapon_expl", "tbl", false, "-wxp"},
     {"particle_effects", "tbl", true, "-part"}};
 
-const size_t fs_tables_count = 42;
+const size_t fs_tables_count = 39;
 
 /* =====================================
    Static Tables (non-modular)
    ===================================== */
 FS_TABLES static_tables[] = {
-    // {"Ai_profiles.tbl"},
-    // {"Autopilot.tbl"},
-    // {"Colors.tbl"},
-    // {"Iff_defs.tbl"},
-    // {"Objecttypes.tbl"},
-    // {"Species_defs.tbl"},
-    // {"Armor.tbl"},
-    // {"Scripting.tbl"},
     {"Controlconfigdefaults.tbl"}};
 
 const size_t static_tables_count = 1;
@@ -200,20 +193,83 @@ bool check_if_mod_structure_exists(const char *base_path)
     return true;
 }
 
-void create_directories(const OP *operation)
+static void ensure_tables_dir(OP *operation)
+{
+    FILE *log = operation->debug ? fopen("log.txt", "a") : NULL;
+    char *tables_path = NULL;
+    if (asprintf(&tables_path, "%s/tables", operation->path) == -1)
+    {
+        if (log)
+            fclose(log);
+        return;
+    }
+
+    if (!operation->dry_run)
+    {
+        int mkdir_result = mkdir(tables_path, 0755);
+        if (mkdir_result == 0)
+        { 
+            operation->dirs_created++;
+        }
+    }
+    // SILENCE - tables/ handled by create_directories()
+
+    free(tables_path);
+    if (log)
+        fclose(log);
+}
+
+static void create_table_file(OP *operation, const char *filename, FILE *log, const char *type)
+{
+    if (operation->dry_run)
+    {
+        if (log)
+            fprintf(log, "Dry-run: Would create %s file: %s\n", type, filename);
+        printf("%s[dry-run]%s Would create %s file: %s\n", COL_YELLOW, COL_RESET, type, filename);
+        operation->tables_created++;
+    }
+    else
+    {
+        FILE *f = fopen(filename, "w");
+        if (f)
+        {
+            fclose(f);
+            if (log)
+                fprintf(log, "Success: Created %s file: %s\n", type, filename);
+            printf("%s%sSuccess:%s Created %s file: %s\n",
+                   TEX_BOLD, COL_GREEN, COL_RESET, type, filename);
+            operation->tables_created++;
+        }
+        else
+        {
+            if (log)
+                fprintf(log, "Error: Failed to create %s file: %s - %s\n", type, filename, strerror(errno));
+            fprintf(stderr, "%s%sError:%s Failed to create %s file: %s - %s\n",
+                    TEX_BOLD, COL_RED, COL_RESET, type, filename, strerror(errno));
+            operation->errors++;
+        }
+    }
+}
+
+void create_directories(OP *operation)
 {
     struct stat st;
     FILE *log = operation->debug ? fopen("log.txt", "a") : NULL;
 
     if (!operation || !operation->path || operation->path[0] == '\0')
+    {
+        if (log)
+            fclose(log);
         return;
+    }
 
     if (stat(operation->path, &st) != 0 || !S_ISDIR(st.st_mode))
     {
         if (log)
-            fprintf(log, "Error: Target path does not exist and or is not a directory: %s\n", operation->path);
-        fprintf(stderr, "%s%sError:%s Target path does not exist and or is not a directory: %s\n",
+            fprintf(log, "Error: Target path does not exist or is not a directory: %s\n", operation->path);
+        fprintf(stderr, "%s%sError:%s Target path does not exist or is not a directory: %s\n",
                 TEX_BOLD, COL_RED, COL_RESET, operation->path);
+        operation->errors++;
         if (log)
             fclose(log);
         return;
@@ -225,6 +281,7 @@ void create_directories(const OP *operation)
             fprintf(log, "Error: Target path is not writable: %s\n", operation->path);
         fprintf(stderr, "%s%sError:%s Target path is not writable: %s\n",
                 TEX_BOLD, COL_RED, COL_RESET, operation->path);
+        operation->errors++;
         if (log)
             fclose(log);
         return;
@@ -237,8 +294,12 @@ void create_directories(const OP *operation)
             continue;
 
         if (operation->dry_run)
-            printf("%s[dry-run]%s Would create directory: %s\n",
-                   COL_YELLOW, COL_RESET, dir_path);
+        {
+            if (log)
+                fprintf(log, "Dry-run: Would create directory: %s\n", dir_path);
+            printf("%s[dry-run]%s Would create directory: %s\n", COL_YELLOW, COL_RESET, dir_path);
+            operation->dirs_created++;
+        }
         else
         {
             int mkdir_result = mkdir(dir_path, 0755);
@@ -248,13 +309,14 @@ void create_directories(const OP *operation)
                     fprintf(log, "Error: Failed to create directory: %s - %s\n", dir_path, strerror(errno));
                 fprintf(stderr, "%s%sError:%s Failed to create directory: %s - %s\n",
                         TEX_BOLD, COL_RED, COL_RESET, dir_path, strerror(errno));
+                operation->errors++;
             }
-            else
+            else if (mkdir_result == 0)
             {
                 if (log)
                     fprintf(log, "Success: Created directory: %s\n", dir_path);
-                printf("%s%sSuccess:%s Created directory: %s\n",
-                       TEX_BOLD, COL_GREEN, COL_RESET, dir_path);
+                printf("%s%sSuccess:%s Created directory: %s\n", TEX_BOLD, COL_GREEN, COL_RESET, dir_path);
+                operation->dirs_created++;
             }
         }
 
@@ -262,11 +324,18 @@ void create_directories(const OP *operation)
         {
             char *subdir_path = NULL;
             if (asprintf(&subdir_path, "%s/%s", dir_path, fs_dirs[i].subdirs[j]) == -1)
+            {
+                free(dir_path);
                 continue;
+            }
 
             if (operation->dry_run)
-                printf("%s[dry-run]%s Would create subdirectory: %s\n",
-                       COL_YELLOW, COL_RESET, subdir_path);
+            {
+                if (log)
+                    fprintf(log, "Dry-run: Would create subdirectory: %s\n", subdir_path);
+                printf("%s[dry-run]%s Would create subdirectory: %s\n", COL_YELLOW, COL_RESET, subdir_path);
+                operation->dirs_created++;
+            }
             else
             {
                 int sub_mkdir_result = mkdir(subdir_path, 0755);
@@ -276,19 +345,19 @@ void create_directories(const OP *operation)
                         fprintf(log, "Error: Failed to create subdirectory: %s - %s\n", subdir_path, strerror(errno));
                     fprintf(stderr, "%s%sError:%s Failed to create subdirectory: %s - %s\n",
                             TEX_BOLD, COL_RED, COL_RESET, subdir_path, strerror(errno));
+                    operation->errors++;
                 }
-                else
+                else if (sub_mkdir_result == 0)
                 {
                     if (log)
                         fprintf(log, "Success: Created subdirectory: %s\n", subdir_path);
-                    printf("%s%sSuccess:%s Created subdirectory: %s\n",
-                           TEX_BOLD, COL_GREEN, COL_RESET, subdir_path);
+                    printf("%s%sSuccess:%s Created subdirectory: %s\n", TEX_BOLD, COL_GREEN, COL_RESET, subdir_path);
+                    operation->dirs_created++;
                 }
             }
 
             free(subdir_path);
         }
-
         free(dir_path);
     }
 
@@ -296,22 +365,25 @@ void create_directories(const OP *operation)
         fclose(log);
 }
 
-void create_modular_tables(const OP *operation)
+void create_tbl_tables(OP *operation)
 {
     struct stat st;
     FILE *log = operation->debug ? fopen("log.txt", "a") : NULL;
-    const char *table_type = operation->table_type ? operation->table_type : "-tbl";
-    const char *prefix = operation->prefix ? operation->prefix : "";
 
     if (!operation || !operation->path || operation->path[0] == '\0')
+    {
+        if (log)
+            fclose(log);
         return;
+    }
 
     if (stat(operation->path, &st) != 0 || !S_ISDIR(st.st_mode))
     {
         if (log)
-            fprintf(log, "Error: Target path does not exist and or is not a directory: %s\n", operation->path);
-        fprintf(stderr, "%s%sError:%s Target path does not exist and or is not a directory: %s\n",
+            fprintf(log, "Error: Target path does not exist or is not a directory: %s\n", operation->path);
+        fprintf(stderr, "%s%sError:%s Target path does not exist or is not a directory: %s\n",
                 TEX_BOLD, COL_RED, COL_RESET, operation->path);
+        operation->errors++;
         if (log)
             fclose(log);
         return;
@@ -323,74 +395,32 @@ void create_modular_tables(const OP *operation)
             fprintf(log, "Error: Target path is not writable: %s\n", operation->path);
         fprintf(stderr, "%s%sError:%s Target path is not writable: %s\n",
                 TEX_BOLD, COL_RED, COL_RESET, operation->path);
+        operation->errors++;
         if (log)
             fclose(log);
         return;
     }
 
+    ensure_tables_dir(operation);
+
     char *tables_path = NULL;
     if (asprintf(&tables_path, "%s/tables", operation->path) == -1)
-        return;
-
-    if (!operation->dry_run)
     {
-        int mkdir_result = mkdir(tables_path, 0755);
-        if (mkdir_result != 0 && errno != EEXIST)
-        {
-            if (log)
-                fprintf(log, "Error: Failed to create tables directory: %s - %s\n", tables_path, strerror(errno));
-            fprintf(stderr, "%s%sError:%s Failed to create tables directory: %s - %s\n",
-                    TEX_BOLD, COL_RED, COL_RESET, tables_path, strerror(errno));
-        }
-        else if (mkdir_result == 0)
-        {
-            if (log)
-                fprintf(log, "Success: Created tables directory: %s\n", tables_path);
-            printf("%s%sSuccess:%s Created tables directory: %s\n",
-                   TEX_BOLD, COL_GREEN, COL_RESET, tables_path);
-        }
+        if (log)
+            fclose(log);
+        return;
     }
 
     for (size_t i = 0; i < fs_tables_count; i++)
     {
-        const FS_TABLE_ENTRY *entry = &fs_tables[i];
+        if (!fs_tables[i].is_modular)
+            continue;
+
         char *filename = NULL;
-        const char *ext = (entry->is_modular && strcmp(table_type, "-tbm") == 0) ? "tbm" : "tbl";
+        if (asprintf(&filename, "%s/%s.tbl", tables_path, fs_tables[i].base_name) == -1)
+            continue;
 
-        if (entry->is_modular && strcmp(table_type, "-tbm") == 0 && prefix[0] != '\0')
-        {
-            if (asprintf(&filename, "%s/%s%s.%s", tables_path, prefix, entry->modular_suffix, ext) == -1)
-                continue;
-        }
-        else
-        {
-            if (asprintf(&filename, "%s/%s.%s", tables_path, entry->base_name, ext) == -1)
-                continue;
-        }
-
-        if (operation->dry_run)
-            printf("%s[dry-run]%s Would create file: %s\n",
-                   COL_YELLOW, COL_RESET, filename);
-        else
-        {
-            FILE *f = fopen(filename, "w");
-            if (f)
-            {
-                fclose(f);
-                if (log)
-                    fprintf(log, "Success: Created table file: %s\n", filename);
-                printf("%s%sSuccess:%s Created table file: %s\n",
-                       TEX_BOLD, COL_GREEN, COL_RESET, filename);
-            }
-            else
-            {
-                if (log)
-                    fprintf(log, "Error: Failed to create table file: %s - %s\n", filename, strerror(errno));
-                fprintf(stderr, "%s%sError:%s Failed to create table file: %s - %s\n",
-                        TEX_BOLD, COL_RED, COL_RESET, filename, strerror(errno));
-            }
-        }
-
+        create_table_file(operation, filename, log, "table");
         free(filename);
     }
 
@@ -399,20 +429,29 @@ void create_modular_tables(const OP *operation)
         fclose(log);
 }
 
-void create_static_tables(const OP *operation)
+void create_tbm_tables(OP *operation)
 {
     struct stat st;
     FILE *log = operation->debug ? fopen("log.txt", "a") : NULL;
 
-    if (!operation || !operation->path || operation->path[0] == '\0')
+    if (!operation || !operation->path || !operation->prefix || operation->prefix[0] == '\0')
+    {
+        if (log)
+            fprintf(log, "Error: Missing prefix for TBM\n");
+        fprintf(stderr, "%s%sError:%s TBM requires prefix\n", TEX_BOLD, COL_RED, COL_RESET);
+        operation->errors++;
+        if (log)
+            fclose(log);
         return;
+    }
 
     if (stat(operation->path, &st) != 0 || !S_ISDIR(st.st_mode))
     {
         if (log)
-            fprintf(log, "Error: Target path does not exist and or is not a directory: %s\n", operation->path);
-        fprintf(stderr, "%s%sError:%s Target path does not exist and or is not a directory: %s\n",
+            fprintf(log, "Error: Target path does not exist or is not a directory: %s\n", operation->path);
+        fprintf(stderr, "%s%sError:%s Target path does not exist or is not a directory: %s\n",
                 TEX_BOLD, COL_RED, COL_RESET, operation->path);
+        operation->errors++;
         if (log)
             fclose(log);
         return;
@@ -424,32 +463,84 @@ void create_static_tables(const OP *operation)
             fprintf(log, "Error: Target path is not writable: %s\n", operation->path);
         fprintf(stderr, "%s%sError:%s Target path is not writable: %s\n",
                 TEX_BOLD, COL_RED, COL_RESET, operation->path);
+        operation->errors++;
         if (log)
             fclose(log);
         return;
     }
 
+    ensure_tables_dir(operation);
+
     char *tables_path = NULL;
     if (asprintf(&tables_path, "%s/tables", operation->path) == -1)
-        return;
-
-    if (!operation->dry_run)
     {
-        int mkdir_result = mkdir(tables_path, 0755);
-        if (mkdir_result != 0 && errno != EEXIST)
-        {
-            if (log)
-                fprintf(log, "Error: Failed to create tables directory: %s - %s\n", tables_path, strerror(errno));
-            fprintf(stderr, "%s%sError:%s Failed to create tables directory: %s - %s\n",
-                    TEX_BOLD, COL_RED, COL_RESET, tables_path, strerror(errno));
-        }
-        else if (mkdir_result == 0)
-        {
-            if (log)
-                fprintf(log, "Success: Created tables directory: %s\n", tables_path);
-            printf("%s%sSuccess:%s Created tables directory: %s\n",
-                   TEX_BOLD, COL_GREEN, COL_RESET, tables_path);
-        }
+        if (log)
+            fclose(log);
+        return;
+    }
+
+    for (size_t i = 0; i < fs_tables_count; i++)
+    {
+        if (!fs_tables[i].is_modular)
+            continue;
+
+        char *filename = NULL;
+        if (asprintf(&filename, "%s/%s%s.tbm", tables_path, operation->prefix, fs_tables[i].modular_suffix) == -1)
+            continue;
+
+        create_table_file(operation, filename, log, "TBM table");
+        free(filename);
+    }
+
+    free(tables_path);
+    if (log)
+        fclose(log);
+}
+
+void create_static_tables(OP *operation)
+{
+    struct stat st;
+    FILE *log = operation->debug ? fopen("log.txt", "a") : NULL;
+
+    if (!operation || !operation->path || operation->path[0] == '\0')
+    {
+        if (log)
+            fclose(log);
+        return;
+    }
+
+    if (stat(operation->path, &st) != 0 || !S_ISDIR(st.st_mode))
+    {
+        if (log)
+            fprintf(log, "Error: Target path does not exist or is not a directory: %s\n", operation->path);
+        fprintf(stderr, "%s%sError:%s Target path does not exist or is not a directory: %s\n",
+                TEX_BOLD, COL_RED, COL_RESET, operation->path);
+        operation->errors++;
+        if (log)
+            fclose(log);
+        return;
+    }
+
+    if (!check_writable(operation->path))
+    {
+        if (log)
+            fprintf(log, "Error: Target path is not writable: %s\n", operation->path);
+        fprintf(stderr, "%s%sError:%s Target path is not writable: %s\n",
+                TEX_BOLD, COL_RED, COL_RESET, operation->path);
+        operation->errors++;
+        if (log)
+            fclose(log);
+        return;
+    }
+
+    ensure_tables_dir(operation);
+
+    char *tables_path = NULL;
+    if (asprintf(&tables_path, "%s/tables", operation->path) == -1)
+    {
+        if (log)
+            fclose(log);
+        return;
     }
 
     for (size_t i = 0; i < static_tables_count; i++)
@@ -458,65 +549,8 @@ void create_static_tables(const OP *operation)
         if (asprintf(&filename, "%s/%s", tables_path, static_tables[i].name) == -1)
             continue;
 
-        if (operation->dry_run)
-            printf("%s[dry-run]%s Would create file: %s\n",
-                   COL_YELLOW, COL_RESET, filename);
-        else
-        {
-            FILE *f = fopen(filename, "w");
-            if (f)
-            {
-                fclose(f);
-                if (log)
-                    fprintf(log, "Success: Created static table file: %s\n", filename);
-                printf("%s%sSuccess:%s Created static table file: %s\n",
-                       TEX_BOLD, COL_GREEN, COL_RESET, filename);
-            }
-            else
-            {
-                if (log)
-                    fprintf(log, "Error: Failed to create static table file: %s - %s\n", filename, strerror(errno));
-                fprintf(stderr, "%s%sError:%s Failed to create static table file: %s - %s\n",
-                        TEX_BOLD, COL_RED, COL_RESET, filename, strerror(errno));
-            }
-        }
-
+        create_table_file(operation, filename, log, "static table");
         free(filename);
-    }
-
-    if (operation->table_type && strcmp(operation->table_type, "-tbl") == 0)
-    {
-        for (size_t i = 0; i < fs_tables_count; i++)
-        {
-            char *filename = NULL;
-            if (asprintf(&filename, "%s/%s.tbl", tables_path, fs_tables[i].base_name) == -1)
-                continue;
-
-            if (operation->dry_run)
-                printf("%s[dry-run]%s Would create file: %s\n",
-                       COL_YELLOW, COL_RESET, filename);
-            else
-            {
-                FILE *f = fopen(filename, "w");
-                if (f)
-                {
-                    fclose(f);
-                    if (log)
-                        fprintf(log, "Success: Created static table file: %s\n", filename);
-                    printf("%s%sSuccess:%s Created static table file: %s\n",
-                           TEX_BOLD, COL_GREEN, COL_RESET, filename);
-                }
-                else
-                {
-                    if (log)
-                        fprintf(log, "Error: Failed to create static table file: %s - %s\n", filename, strerror(errno));
-                    fprintf(stderr, "%s%sError:%s Failed to create static table file: %s - %s\n",
-                            TEX_BOLD, COL_RED, COL_RESET, filename, strerror(errno));
-                }
-            }
-
-            free(filename);
-        }
     }
 
     free(tables_path);
