@@ -171,8 +171,15 @@ int main(int argc, char *argv[])
     printf("\n%s%s--- Summary ---%s\n", TEX_BOLD, COL_CYAN, COL_RESET);
     printf("  %sDirectories:%s %s%d%s\n", TEX_BOLD, COL_RESET, COL_GREEN, operation.dirs_created, COL_RESET);
     printf("  %sTables:%s     %s%d%s\n", TEX_BOLD, COL_RESET, COL_GREEN, operation.tables_created, COL_RESET);
-    printf("  %sErrors:%s     %s%d%s\n", TEX_BOLD, COL_RESET,
-           (operation.errors > 0 ? COL_RED : COL_GREEN), operation.errors, COL_RESET);
+    printf("  %sErrors:%s     ", TEX_BOLD, COL_RESET);
+    if (operation.errors > 0)
+    {
+        printf("%s%d%s\n", COL_RED, operation.errors, COL_RESET);
+    }
+    else
+    {
+        printf("%s%d%s\n", COL_GREEN, operation.errors, COL_RESET);
+    }
     printf("%s%s----------------%s\n", TEX_BOLD, COL_CYAN, COL_RESET);
 
     if (operation.debug)
