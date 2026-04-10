@@ -20,6 +20,10 @@ if(MSVC)
     $<$<CONFIG:Debug>:/Zi /Od>
     $<$<CONFIG:Release>:/O2>
   )
+  target_compile_definitions(FSMINIT PRIVATE
+    _CRT_SECURE_NO_WARNINGS
+    _CRT_NONSTDC_NO_DEPRECATE
+  )
 else()
   target_compile_options(FSMINIT PRIVATE
     -Wall -Wextra
