@@ -28,7 +28,7 @@ const char *voice_subdirs[] = {
     "special",
     "training"};
 
-const size_t voice_subdirs_count = sizeof(voice_subdirs) / sizeof(voice_subdirs[0]);
+const size_t voice_subdirs_count = 6;
 
 /* =====================================
    Directory Table
