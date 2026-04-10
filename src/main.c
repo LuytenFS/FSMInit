@@ -1,3 +1,4 @@
+/* main.c */
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -36,19 +37,13 @@ int main(int argc, char *argv[])
     bool is_stdmc = (argc > 1 && strcmp(argv[1], "-stdmc") == 0);
     bool is_stdm = (argc > 1 && strcmp(argv[1], "-stdm") == 0);
 
-    // -----------------------------
-    // Check at least one argument
-    // -----------------------------
     if (argc < 2)
     {
-        fprintf(stderr, "%s%sUsage:%s <command> <path> <-tbl/-tbm> [prefix if -tbm] [optional -debug]\n",
+        fprintf(stderr, "%s%sUsage:%s <command> <path> <-tbl/-tbm> [prefix if -tbm] [optional -debug/-dry-run]\n",
                 TEX_BOLD, COL_YELLOW, COL_RESET);
         return 1;
     }
 
-    // -----------------------------
-    // Initialize operation struct
-    // -----------------------------
     operation.command = argv[1];
     operation.path = argc > 2 ? argv[2] : NULL;
     operation.table_type = is_stdmc && argc > 3 ? argv[3] : NULL;
@@ -56,9 +51,6 @@ int main(int argc, char *argv[])
     operation.debug = 0;
     operation.dry_run = 0;
 
-    // -----------------------------
-    // Handle -help
-    // -----------------------------
     if (strcmp(argv[1], "-help") == 0)
     {
         if (argc != 2)
@@ -69,18 +61,13 @@ int main(int argc, char *argv[])
         }
 
         printf(
-            "Command-line arguments for the program:\n\n"
-            "1. <command>       : Allowed values:\n"
-            "                     - \"-stdm\"   : Standard Mod (no tables)\n"
-            "                     - \"-stdmc\"  : Standard Mod Complex (with tables)\n"
-            "                     - \"-help\"   : Display usage information\n\n"
-            "2. <path>          : Directory path where the tool will create directories and tables.\n\n"
-            "3. <-tbl/-tbm>     : Specifies whether to create standard .tbl files or modular .tbm files (only for -stdmc).\n\n"
-            "4. <prefix>        : Optional prefix for .tbm files. Required only if \"-tbm\" is specified.\n"
-            "                     Ignored for \"-tbl\".\n\n"
-            "5. [-debug]        : Optional flag. Enables debug output to \"log.txt\" in the program's current directory.\n"
-            "6. [-dry-run]      : Optional flag. Runs a dry run, showing what would happen without doing it.\n");
-
+            "Command-line arguments:\n\n"
+            "1. <command>     : \"-stdm\" (dirs only), \"-stdmc\" (dirs+tables), \"-help\", \"-version\"\n"
+            "2. <path>        : Target directory\n"
+            "3. <-tbl/-tbm>   : Table type (stdmc only)\n"
+            "4. <prefix>      : Required for -tbm\n"
+            "5. [-debug]      : Log to log.txt\n"
+            "6. [-dry-run]    : Simulate only\n");
         return 0;
     }
 
@@ -90,101 +77,72 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    // -----------------------------
-    // Determine command type
-    // -----------------------------
     if (!is_stdmc && !is_stdm)
     {
-        fprintf(stderr, "%s%sError:%s Unknown command '%s'. Use -help for usage.\n",
+        fprintf(stderr, "%s%sError:%s Unknown command '%s'. Use -help.\n",
                 TEX_BOLD, COL_RED, COL_RESET, argv[1]);
         return 1;
     }
 
-    // -----------------------------
-    // Validate argument count
-    // -----------------------------
     int min_args = is_stdm ? 3 : 4;
     if (argc < min_args)
     {
         if (is_stdm)
-            fprintf(stderr, "%s%sUsage:%s <command> <path> [optional -debug]\n",
+            fprintf(stderr, "%s%sUsage:%s -stdm <path> [-debug] [-dry-run]\n",
                     TEX_BOLD, COL_YELLOW, COL_RESET);
         else
-            fprintf(stderr, "%s%sUsage:%s <command> <path> <-tbl/-tbm> [prefix if -tbm] [optional -debug]\n",
+            fprintf(stderr, "%s%sUsage:%s -stdmc <path> <-tbl/-tbm> [prefix] [-debug] [-dry-run]\n",
                     TEX_BOLD, COL_YELLOW, COL_RESET);
         return 1;
     }
 
-    // -----------------------------
-    // Buffer checks
-    // -----------------------------
     if (strlen(argv[2]) >= PATH_MAX)
     {
-        fprintf(stderr, "%s%sError:%s Path is too long. Maximum %d characters.\n",
+        fprintf(stderr, "%s%sError:%s Path too long (max %d chars)\n",
                 TEX_BOLD, COL_RED, COL_RESET, PATH_MAX - 1);
         return 1;
     }
 
-    // -----------------------------
-    // Handle optional prefix if -tbm
-    // -----------------------------
     int start_index = is_stdm ? 3 : 4;
     if (is_stdmc && operation.table_type && strcmp(operation.table_type, "-tbm") == 0)
     {
         if (argc < 5)
         {
-            fprintf(stderr, "%s%sError:%s '.tbm' file extension requires a prefix argument.\n",
-                    TEX_BOLD, COL_RED, COL_RESET);
+            fprintf(stderr, "%s%sError:%s -tbm requires prefix\n", TEX_BOLD, COL_RED, COL_RESET);
             return 1;
         }
         if (strlen(argv[4]) > 32)
         {
-            fprintf(stderr, "%s%sError:%s Prefix is too long. Maximum 32 characters.\n",
-                    TEX_BOLD, COL_RED, COL_RESET);
+            fprintf(stderr, "%s%sError:%s Prefix too long (max 32 chars)\n", TEX_BOLD, COL_RED, COL_RESET);
             return 1;
         }
         operation.prefix = argv[4];
         start_index = 5;
     }
 
-    // -----------------------------
-    // Handle optional -debug/-dry-run
-    // -----------------------------
     for (int i = start_index; i < argc; ++i)
     {
-        /* These cannot ever be null */
-        if (strcmp(argv[i], "-debug") == 0) // NOLINT(clang-analyzer-core.NonNullParamChecker)
+        if (strcmp(argv[i], "-debug") == 0)
             operation.debug = 1;
-        else if (strcmp(argv[i], "-dry-run") == 0) // NOLINT(clang-analyzer-core.NonNullParamChecker)
+        else if (strcmp(argv[i], "-dry-run") == 0)
             operation.dry_run = 1;
     }
 
-    // -----------------------------
-    // Debug output if enabled
-    // -----------------------------
     if (operation.debug)
     {
         FILE *log_file = fopen("log.txt", "a");
         if (log_file)
         {
-            fprintf(log_file, "=== Debug Start ===\n");
-            fprintf(log_file, "Command       : %s\n", operation.command);
-            fprintf(log_file, "Path          : %s\n", operation.path);
-            fprintf(log_file, "Table type    : %s\n", operation.table_type ? operation.table_type : "N/A");
-            fprintf(log_file, "Prefix        : %s\n", operation.prefix ? operation.prefix : "N/A");
-            fprintf(log_file, "Debug enabled : %d\n", operation.debug);
-            fprintf(log_file, "Dry-run       : %s\n", operation.dry_run ? "enabled" : "disabled");
-            fprintf(log_file, "===================\n\n");
+            fprintf(log_file, "=== Debug ===\nCommand: %s\nPath: %s\nTable: %s\nPrefix: %s\nDebug: %d\nDry-run: %d\n===========\n\n",
+                    operation.command, operation.path, operation.table_type ?: "N/A", operation.prefix ?: "N/A",
+                    operation.debug, operation.dry_run);
             fclose(log_file);
         }
     }
 
-    // -----------------------------
-    // Execute based on command
-    // -----------------------------
     if (check_if_mod_structure_exists(operation.path))
     {
-        fprintf(stderr, "%s%sError:%s Mod structure already exists at: %s\n",
+        fprintf(stderr, "%s%sError:%s Mod structure exists at: %s\n",
                 TEX_BOLD, COL_RED, COL_RESET, operation.path);
         return 1;
     }
@@ -195,35 +153,34 @@ int main(int argc, char *argv[])
     {
         create_static_tables(&operation);
 
-        if (operation.table_type && strcmp(operation.table_type, "-tbm") == 0)
-            create_modular_tables(&operation);
-        else if (operation.table_type && strcmp(operation.table_type, "-tbl") != 0)
+        if (operation.table_type)
         {
-            fprintf(stderr, "%s%sError:%s Unknown table type '%s'. Use -tbl or -tbm.\n",
-                    TEX_BOLD, COL_RED, COL_RESET, operation.table_type);
-            return 1;
+            if (strcmp(operation.table_type, "-tbl") == 0)
+                create_tbl_tables(&operation);
+            else if (strcmp(operation.table_type, "-tbm") == 0)
+                create_tbm_tables(&operation);
+            else
+            {
+                fprintf(stderr, "%s%sError:%s Unknown table type '%s' (use -tbl or -tbm)\n",
+                        TEX_BOLD, COL_RED, COL_RESET, operation.table_type);
+                return 1;
+            }
         }
     }
 
-    // -----------------------------
-    // Summary
-    // -----------------------------
     printf("\n%s%s--- Summary ---%s\n", TEX_BOLD, COL_CYAN, COL_RESET);
-    printf("  %sDirectories%s : %s%d%s\n", TEX_BOLD, COL_RESET, COL_GREEN, operation.dirs_created, COL_RESET);
-    printf("  %sTables%s      : %s%d%s\n", TEX_BOLD, COL_RESET, COL_GREEN, operation.tables_created, COL_RESET);
-    printf("  %sErrors%s      : %s%d%s\n", TEX_BOLD, COL_RESET, operation.errors > 0 ? COL_RED : COL_GREEN, operation.errors, COL_RESET);
-    printf("%s%s-----------------%s\n", TEX_BOLD, COL_CYAN, COL_RESET);
+    printf("  %sDirectories:%s %s%d%s\n", TEX_BOLD, COL_RESET, COL_GREEN, operation.dirs_created, COL_RESET);
+    printf("  %sTables:%s     %s%d%s\n", TEX_BOLD, COL_RESET, COL_GREEN, operation.tables_created, COL_RESET);
+    printf("  %sErrors:%s     %s%d%s\n", TEX_BOLD, COL_RESET, operation.errors > 0 ? COL_RED : COL_GREEN, operation.errors, COL_RESET);
+    printf("%s%s----------------%s\n", TEX_BOLD, COL_CYAN, COL_RESET);
 
     if (operation.debug)
     {
         FILE *log_file = fopen("log.txt", "a");
         if (log_file)
         {
-            fprintf(log_file, "=== Summary ===\n");
-            fprintf(log_file, "Directories : %d\n", operation.dirs_created);
-            fprintf(log_file, "Tables      : %d\n", operation.tables_created);
-            fprintf(log_file, "Errors      : %d\n", operation.errors);
-            fprintf(log_file, "===============\n\n");
+            fprintf(log_file, "Summary: Dirs=%d, Tables=%d, Errors=%d\n\n",
+                    operation.dirs_created, operation.tables_created, operation.errors);
             fclose(log_file);
         }
     }
