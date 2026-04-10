@@ -7,4 +7,4 @@
  *  #define FSMINIT_VERSION_BUILD 0
 */
 
-#define FSMINIT_VERSION "0.1.0.0"
+#define FSMINIT_VERSION "0.1.0.3"
