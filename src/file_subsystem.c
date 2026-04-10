@@ -84,7 +84,7 @@ FS_DIRECTORIES fs_dirs[] = {
     {"16b11k", NULL, 0},
     {"tables", NULL, 0},
     {"text", NULL, 0},
-    {"voice", NULL, 0}};
+    {"voice", (const char **)voice_subdirs, 6}};
 
 const size_t fs_dirs_count = 28;
 
