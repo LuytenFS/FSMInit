@@ -8,6 +8,7 @@
 #define PATH_MAX 4096
 #endif
 
+#include "version.h"
 #include "def_type.h"
 #include "file_subsystem.h"
 
@@ -45,6 +46,12 @@ int main(int argc, char *argv[])
             "                     Ignored for \"-tbl\".\n\n"
             "5. [-debug]        : Optional flag. Enables debug output to \"log.txt\" in the program's current directory.\n");
 
+        return 0;
+    }
+
+    if (strcmp(argv[1], "-version") == 0)
+    {
+        printf("Developed by LuytenKy, FSMInit Version: (" FSMINIT_VERSION ")\n");
         return 0;
     }
 
