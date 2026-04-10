@@ -4,139 +4,64 @@ on:
   push:
     tags:
       - 'release_*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
-  create_release:
-    name: Create GitHub release
-    runs-on: ubuntu-latest
-    steps:
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
-
-  build_linux:
+  build:
     strategy:
       matrix:
-        configuration: [Debug, Release]
-        os: [ubuntu-22.04, ubuntu-24.04]
-    name: Linux ${{ matrix.configuration }}
-    needs: create_release
-    runs-on: ${{ matrix.os }}
+        platform: [
+          { name: "Linux Debug",     os: "ubuntu-22.04",     ext: "tar.gz",  config: "Debug" },
+          { name: "Linux Release",   os: "ubuntu-24.04",     ext: "tar.gz",  config: "Release" },
+          { name: "Windows Debug",   os: "windows-2022",     ext: "zip",     config: "Debug" },
+          { name: "Windows Release", os: "windows-2022",     ext: "zip",     config: "Release" },
+          { name: "macOS Debug",     os: "macos-15",         ext: "tar.gz",  config: "Debug" },
+          { name: "macOS Release",   os: "macos-15",         ext: "tar.gz",  config: "Release" }
+        ]
+    runs-on: ${{ matrix.platform.os }}
+    name: ${{ matrix.platform.name }}
+    
     steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
 
-      - name: Configure CMake
-        run: |
-          cmake -B build/debug \
-            -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} \
-            -DCLANG_TIDY_EXE=$(which clang-tidy)
+    - name: Install macOS dependencies
+      if: runner.os == 'macOS'
+      run: |
+        brew install llvm
+        
+    - name: Configure CMake
+      run: |
+        if [ "${{ runner.os }}" = "Windows" ]; then
+          cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.platform.config }} -DCLANG_TIDY_EXE=$(where clang-tidy)
+        elif [ "${{ runner.os }}" = "macOS" ]; then
+          cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.platform.config }} -DCLANG_TIDY_EXE=$(which clang-tidy) -DCMAKE_C_COMPILER=clang
+        else
+          cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.platform.config }} -DCLANG_TIDY_EXE=$(which clang-tidy)
+        fi
 
-      - name: Build
-        working-directory: ./build/debug
-        run: cmake --build . --config ${{ matrix.configuration }}
+    - name: Build
+      working-directory: ./build
+      run: cmake --build . --config ${{ matrix.platform.config }}
 
-      - name: Package
-        run: |
-          mkdir -p build/debug/install
-          cmake --install build/debug --config ${{ matrix.configuration }} --prefix build/debug/install
-          tar -czf fsminit-${{ matrix.configuration }}-linux-${{ matrix.os }}.tar.gz -C build/debug/install .
+    - name: Package
+      shell: bash
+      run: |
+        mkdir -p build/install
+        cmake --install build --config ${{ matrix.platform.config }} --prefix build/install
+        cd build/install
+        if [ "${{ matrix.platform.ext }}" = "zip" ]; then
+          7z a ../../fsminit-${{ matrix.platform.config }}-${{ matrix.platform.os }}.${{ matrix.platform.ext }} *
+        else
+          tar -czf ../../fsminit-${{ matrix.platform.config }}-${{ matrix.platform.os }}.${{ matrix.platform.ext }} .
+        fi
 
-      - name: Upload build result
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: fsminit-${{ matrix.configuration }}-linux-${{ matrix.os }}.tar.gz
-          asset_name: fsminit-${{ matrix.configuration }}-linux-${{ matrix.os }}.tar.gz
-          asset_content_type: application/gzip
-
-  build_windows:
-    strategy:
-      matrix:
-        configuration: [Debug, Release]
-    needs: create_release
-    name: Windows ${{ matrix.configuration }}
-    runs-on: windows-2022
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-
-      - name: Configure CMake
-        run: cmake -B build/debug -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DCLANG_TIDY_EXE=$(where clang-tidy)
-
-      - name: Build
-        working-directory: ./build/debug
-        shell: bash
-        run: cmake --build . --config ${{ matrix.configuration }}
-
-      - name: Package
-        shell: bash
-        run: |
-          mkdir -p build/debug/install
-          cmake --install build/debug --config ${{ matrix.configuration }} --prefix build/debug/install
-          7z a fsminit-${{ matrix.configuration }}-windows.zip build/debug/install/*
-
-      - name: Upload build result
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: fsminit-${{ matrix.configuration }}-windows.zip
-          asset_name: fsminit-${{ matrix.configuration }}-windows.zip
-          asset_content_type: application/zip
-
-  build_mac:
-    strategy:
-      matrix:
-        configuration: [Debug, Release]
-    needs: create_release
-    name: macOS ${{ matrix.configuration }}
-    runs-on: macos-15
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-
-      - name: Install clang-tidy
-        run: |
-          brew install llvm
-          echo "$(brew --prefix llvm)/bin" >> $GITHUB_PATH
-
-      - name: Configure CMake
-        run: |
-          cmake -B build/debug \
-            -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} \
-            -DCLANG_TIDY_EXE=$(which clang-tidy) \
-            -DCMAKE_C_COMPILER=clang
-
-      - name: Build
-        working-directory: ./build/debug
-        run: cmake --build . --config ${{ matrix.configuration }}
-
-      - name: Package
-        run: |
-          mkdir -p build/debug/install
-          cmake --install build/debug --config ${{ matrix.configuration }} --prefix build/debug/install
-          tar -czf fsminit-${{ matrix.configuration }}-macos.tar.gz -C build/debug/install .
-
-      - name: Upload build result
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: fsminit-${{ matrix.configuration }}-macos.tar.gz
-          asset_name: fsminit-${{ matrix.configuration }}-macos.tar.gz
-          asset_content_type: application/gzip
+    - name: Upload Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: fsminit-${{ matrix.platform.config }}-${{ matrix.platform.os }}.*
+        generate_release_notes: true
