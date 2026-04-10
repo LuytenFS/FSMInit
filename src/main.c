@@ -133,8 +133,10 @@ int main(int argc, char *argv[])
         FILE *log_file = fopen("log.txt", "a");
         if (log_file)
         {
+            const char *table_str = operation.table_type ? operation.table_type : "N/A";
+            const char *prefix_str = operation.prefix ? operation.prefix : "N/A";
             fprintf(log_file, "=== Debug ===\nCommand: %s\nPath: %s\nTable: %s\nPrefix: %s\nDebug: %d\nDry-run: %d\n===========\n\n",
-                    operation.command, operation.path, operation.table_type ?: "N/A", operation.prefix ?: "N/A",
+                    operation.command, operation.path, table_str, prefix_str,
                     operation.debug, operation.dry_run);
             fclose(log_file);
         }
