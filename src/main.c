@@ -12,10 +12,6 @@
 #include <unistd.h>
 #endif
 
-#ifndef PATH_MAX
-#define PATH_MAX 4096
-#endif
-
 #include "version.h"
 #include "def_type.h"
 #include "file_subsystem.h"
