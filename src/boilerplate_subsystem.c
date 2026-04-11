@@ -6,8 +6,6 @@
 #include <sys/stat.h>
 #include <errno.h>
 
-// --- common portability definitions ---
-
 #ifndef PATH_MAX
 #define PATH_MAX 4096
 #endif
@@ -16,16 +14,12 @@
 #define S_ISREG(m) (((m) & _S_IFMT) == _S_IFREG)
 #endif
 
-// --- Windows-specific wrappers ---
-
 #ifdef _WIN32
-
 #include <io.h>
 #include <direct.h>
 #include <windows.h>
 #include <sys/stat.h>
 
-// check if path is writable
 #define check_writable(p) (_access((p), 2) == 0)
 
 // Windows asprintf wrapper
@@ -47,9 +41,6 @@ static int _asprintf(char **ret, const char *format, ...)
     va_end(ap);
     return size;
 }
-
-// --- DIR / opendir / readdir / closedir for Windows ---
-// Must be visible before verify_tables_directory
 
 struct dirent
 {
@@ -106,17 +97,7 @@ int closedir(DIR *dir)
     return 0;
 }
 
-// --- end of Windows opendir/readdir/closedir ---
-
-int path_is_dir(const char *path)
-{
-    struct _stat st;
-    if (_stat(path, &st) != 0)
-        return 0;
-    return (st.st_mode & _S_IFDIR) != 0;
-}
-
-#else // not _WIN32 → Linux
+#else
 
 #include <unistd.h>
 #include <dirent.h>
@@ -129,6 +110,7 @@ int path_is_dir(const char *path)
 #include "text_type.h"
 #include "file_subsystem.h"
 #include "boilerplate_subsystem.h"
+
 
 /*
 Check to see if the mod structure has been generated successfully, if so,
