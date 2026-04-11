@@ -6,8 +6,8 @@
 #include <sys/stat.h>
 #include <errno.h>
 
-// --- Common portability definitions (outside _WIN32) ---
-// Must be defined before any code that uses PATH_MAX / S_ISREG etc.
+// --- common portability definitions ---
+
 #ifndef PATH_MAX
 #define PATH_MAX 4096
 #endif
@@ -15,14 +15,15 @@
 #ifndef S_ISREG
 #define S_ISREG(m) (((m) & _S_IFMT) == _S_IFREG)
 #endif
-#ifndef S_ISDIR
-#define S_ISDIR(m) (((m) & _S_IFMT) == _S_IFDIR)
-#endif
+
+// --- Windows-specific wrappers ---
 
 #ifdef _WIN32
+
 #include <io.h>
 #include <direct.h>
 #include <windows.h>
+#include <sys/stat.h>
 
 // check if path is writable
 #define check_writable(p) (_access((p), 2) == 0)
@@ -47,15 +48,80 @@ static int _asprintf(char **ret, const char *format, ...)
     return size;
 }
 
-// --- Windows‑only stuff (opendir / readdir / closedir / path_is_dir) ---
-// ... (keep your Windows opendir / readdir / closedir / path_is_dir here)
-// ...
+// --- DIR / opendir / readdir / closedir for Windows ---
+// Must be visible before verify_tables_directory
 
-#else
+struct dirent
+{
+    char d_name[260];
+};
+
+typedef long long DIR;
+
+DIR *opendir(const char *dirname)
+{
+    char pattern[PATH_MAX + 4];
+    snprintf(pattern, sizeof(pattern), "%s/*", dirname);
+    long handle = _findfirst(pattern, &((struct _finddata_t){0}));
+    return handle != -1L ? (DIR *)handle : NULL;
+}
+
+struct dirent *readdir(DIR *dir)
+{
+    static struct _finddata_t entry;
+    static struct dirent de;
+    static long handle;
+
+    if (dir == NULL)
+        return NULL;
+
+    handle = (long)dir;
+    if (handle == 0 || handle == -1L)
+        return NULL;
+
+    if (handle == (long)dir && _findfirst != 0)
+    {
+        handle = _findfirst((const char *)_findfirst, &entry);
+        if (handle == -1)
+            return NULL;
+    }
+    else
+    {
+        if (_findnext(handle, &entry) != 0)
+            return NULL;
+    }
+
+    strcpy(de.d_name, entry.name);
+    return &de;
+}
+
+int closedir(DIR *dir)
+{
+    if (dir == NULL)
+        return -1;
+    long handle = (long)dir;
+    if (handle == 0 || handle == -1L)
+        return -1;
+    _findclose(handle);
+    return 0;
+}
+
+// --- end of Windows opendir/readdir/closedir ---
+
+int path_is_dir(const char *path)
+{
+    struct _stat st;
+    if (_stat(path, &st) != 0)
+        return 0;
+    return (st.st_mode & _S_IFDIR) != 0;
+}
+
+#else // not _WIN32 → Linux
+
 #include <unistd.h>
 #include <dirent.h>
-
 #define check_writable(p) (access((p), W_OK) == 0)
+
 #endif
 
 #include "def_type.h"
