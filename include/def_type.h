@@ -110,9 +110,22 @@ typedef struct FS_TABLES
     const char *name;
 } FS_TABLES;
 
-/* =======================
-   External Declarations
-   ======================= */
+typedef struct BPL_ENTRY
+{
+    const char *key; /* "-wep" or "weapons", etc... */ 
+    const char **variants; /* array of boilerplate strings */
+    size_t variant_count; 
+} BPL_ENTRY;
+
+typedef struct TABLE_FILE_LIST
+{
+    char **paths;
+    size_t count;
+} TABLE_FILE_LIST;
+
+    /* =======================
+       External Declarations
+       ======================= */
 extern const char *voice_subdirs[];
 extern const size_t voice_subdirs_count;
 

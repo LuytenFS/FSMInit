@@ -146,7 +146,7 @@ const size_t static_tables_count = 1;
    File & Directory Creation
    ===================================== */
 
-static bool path_is_dir(const char *path)
+bool path_is_dir(const char *path)
 {
     struct stat st;
     if (stat(path, &st) != 0)
