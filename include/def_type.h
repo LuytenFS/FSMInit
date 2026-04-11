@@ -19,6 +19,9 @@ typedef struct OP
     int dirs_created;
     int tables_created;
     int errors;
+
+    /* For Boilerplates */
+    int gen_boilerplate;
 } OP;
 
 /* =======================
