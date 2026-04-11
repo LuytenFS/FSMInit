@@ -155,7 +155,7 @@ static char *strip_path_ext(const char *filename)
     else
         base++;
 
-    char *dot = strrchr(base, '.');
+    const char *dot = strrchr(base, '.');
     if (!dot)
         dot = base + strlen(base);
 
@@ -201,6 +201,7 @@ const BPL_ENTRY *find_boilerplate(const char *filename)
     free(key);
     return NULL;
 }
+
 void write_to_tables(const BPL_ENTRY *entry, const char *filepath, OP *operation)
 {
     FILE *fp;
@@ -218,10 +219,13 @@ void write_to_tables(const BPL_ENTRY *entry, const char *filepath, OP *operation
         return;
     }
 
-    /*
-     *   This is where we will write to tables using their file paths
-     *   since BPL_ENTRY's bpl_table[] has not yet been implemented, this function will remain as is.
-     */
-
+    if (entry && entry->variants){
+        for (size_t i = 0; i < entry->variant_count; i++)
+        {
+            if (entry->variants[i]){
+                fprintf(fp, "%s\n", entry->variants[i]);
+            }
+        }
+    }
     fclose(fp);
 }

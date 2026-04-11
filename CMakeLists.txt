@@ -8,7 +8,7 @@ endif()
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # More reliable source listing (avoids globbing issues)
-set(SRCS src/main.c src/file_subsystem.c)
+set(SRCS src/main.c src/file_subsystem.c src/boilerplate_subsystem.c )
 
 add_executable(FSMINIT ${SRCS})
 target_include_directories(FSMINIT PRIVATE include)

@@ -17,6 +17,7 @@
 #include "file_subsystem.h"
 #include "text_type.h"
 #include "color.h"
+#include "boilerplate_subsystem.h"
 
 bool g_color_enabled = false;
 
@@ -45,6 +46,7 @@ int main(int argc, char *argv[])
     operation.prefix = NULL;
     operation.debug = 0;
     operation.dry_run = 0;
+    operation.gen_boilerplate = 0;
 
     if (strcmp(argv[1], "-help") == 0)
     {
@@ -98,7 +100,6 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    int start_index = is_stdm ? 3 : 4;
     if (is_stdmc && operation.table_type && strcmp(operation.table_type, "-tbm") == 0)
     {
         if (argc < 5)
@@ -112,15 +113,45 @@ int main(int argc, char *argv[])
             return 1;
         }
         operation.prefix = argv[4];
-        start_index = 5;
     }
 
-    for (int i = start_index; i < argc; ++i)
+    int arg_idx = is_stdm ? 3 : 4;
+    for (int i = arg_idx; i < argc; ++i)
     {
-        if (strcmp(argv[i], "-debug") == 0)
+        if (strcmp(argv[i], "-bpl") == 0)
+        {
+            operation.gen_boilerplate = 1;
+        }
+        else if (!operation.table_type &&
+                 (strcmp(argv[i], "-tbl") == 0 || strcmp(argv[i], "-tbm") == 0))
+        {
+            operation.table_type = argv[i];
+        }
+        else if (operation.table_type && strcmp(operation.table_type, "-tbm") == 0 &&
+                 !operation.prefix)
+        {
+            if (strlen(argv[i]) > 32)
+            {
+                fprintf(stderr, "%s%sError:%s Prefix too long (max 32 chars)\n",
+                        TEX_BOLD, COL_RED, COL_RESET);
+                return 1;
+                return 1;
+            }
+            operation.prefix = argv[i];
+        }
+        else if (strcmp(argv[i], "-debug") == 0)
+        {
             operation.debug = 1;
+        }
         else if (strcmp(argv[i], "-dry-run") == 0)
+        {
             operation.dry_run = 1;
+        }
+        else
+        {
+            fprintf(stderr, "Unknown argument: %s\n", argv[i]);
+            return 1;
+        }
     }
 
     if (operation.debug)
@@ -162,6 +193,38 @@ int main(int argc, char *argv[])
                         TEX_BOLD, COL_RED, COL_RESET, operation.table_type);
                 return 1;
             }
+        }
+    }
+
+    if (operation.table_type && operation.gen_boilerplate)
+    {
+        printf("%sWriting boilerplate to tables...%s%s\n", TEX_BOLD, COL_MAGENTA, COL_RESET);
+
+        char *tables_path = NULL;
+        if (asprintf(&tables_path, "%s/tables", operation.path) == -1)
+        {
+            operation.errors++;
+        }
+        else
+        {
+            TABLE_FILE_LIST *tables = verify_tables_directory(tables_path);
+            if (tables)
+            {
+                for (size_t i = 0; i < tables->count; i++)
+                {
+                    const BPL_ENTRY *entry = find_boilerplate(tables->paths[i]);
+                    if (entry)
+                    {
+                        write_to_tables(entry, tables->paths[i], &operation);
+                    }
+                }
+                // Cleanup
+                for (size_t i = 0; i < tables->count; i++)
+                    free(tables->paths[i]);
+                free(tables->paths);
+                free(tables);
+            }
+            free(tables_path);
         }
     }
 
