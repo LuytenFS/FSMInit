@@ -5,11 +5,15 @@
 #include <stdbool.h>
 #include <sys/stat.h>
 #include <errno.h>
-#include <dirent.h>
 
 #ifdef _WIN32
 #include <io.h>
+#include <direct.h>
+
+// check if path is writable
 #define check_writable(p) (_access((p), 2) == 0)
+
+// Windows asprintf wrapper
 #define asprintf(buf, fmt, ...) _asprintf(buf, fmt, __VA_ARGS__)
 static int _asprintf(char **ret, const char *format, ...)
 {
@@ -28,8 +32,90 @@ static int _asprintf(char **ret, const char *format, ...)
     va_end(ap);
     return size;
 }
+
+// Windows directory ENTRIES
+struct dirent
+{
+    char d_name[260];
+};
+
+typedef long long DIR;
+
+// _findfirst / _findnext wrapper to behave like opendir/readdir
+DIR *opendir(const char *dirname)
+{
+    char pattern[PATH_MAX + 4];
+    snprintf(pattern, sizeof(pattern), "%s/*", dirname);
+    long handle = _findfirst(pattern, &((struct _finddata_t){0}));
+    return handle != -1L ? (DIR *)handle : NULL;
+}
+
+struct dirent *readdir(DIR *dir)
+{
+    static struct _finddata_t entry;
+    static struct dirent de;
+    static long handle;
+
+    if (dir == NULL)
+        return NULL;
+
+    handle = (long)dir;
+
+    if (handle == 0)
+        return NULL;
+
+    if (handle == -1L)
+        return NULL;
+
+    // First call
+    if (handle == (long)dir && _findfirst != 0)
+    {
+        handle = _findfirst((const char *)_findfirst, &entry);
+        if (handle == -1)
+            return NULL;
+    }
+    else
+    {
+        // Subsequent calls
+        if (_findnext(handle, &entry) != 0)
+            return NULL;
+    }
+
+    strcpy(de.d_name, entry.name);
+    return &de;
+}
+
+int closedir(DIR *dir)
+{
+    if (dir == NULL)
+        return -1;
+    long handle = (long)dir;
+    if (handle == 0 || handle == -1L)
+        return -1;
+    _findclose(handle);
+    return 0;
+}
+
+// is a path a directory (Windows)
+int path_is_dir(const char *path)
+{
+    struct _stat st;
+    if (_stat(path, &st) != 0)
+        return 0;
+    return (st.st_mode & _S_IFDIR) != 0;
+}
+
+// realpath / normalize path if needed
+const char *path_real(const char *path)
+{
+    // just a placeholder; on Windows you can use _fullpath if you want
+    return path;
+}
+
 #else
 #include <unistd.h>
+#include <dirent.h>
+
 #define check_writable(p) (access((p), W_OK) == 0)
 #endif
 
@@ -40,8 +126,8 @@ static int _asprintf(char **ret, const char *format, ...)
 #include "boilerplate_subsystem.h"
 
 /*
-check to see if the mod structure has generated successfuly, if so,
-!!!(for now discard all of the unneeded data and focus only on the tables/ being present)!!!
+Check to see if the mod structure has been generated successfully, if so,
+focus only on the tables/ directory being present.
 */
 bool verify_mod_structure(const char *base_path)
 {
@@ -55,13 +141,13 @@ bool verify_mod_structure(const char *base_path)
 
             bool exists = path_is_dir(dir_path);
             free(dir_path);
-            if(!exists)
+            if (!exists)
             {
                 return false;
             }
         }
         return true;
-    } 
+    }
     else
     {
         return false;
@@ -87,7 +173,6 @@ TABLE_FILE_LIST *verify_tables_directory(const char *base_path_tables)
     DIR *dir = opendir(base_path_tables);
     if (!dir)
     {
-        perror("opendir");
         free(tfl);
         return NULL;
     }
@@ -160,21 +245,32 @@ static char *strip_path_ext(const char *filename)
         dot = base + strlen(base);
 
     size_t len = dot - base;
-    char *key = malloc(len + 1);
-    if (key)
+    char *full = malloc(len + 1);
+    if (full)
     {
-        strncpy(key, base, len);
-        key[len] = '\0';
+        strncpy(full, base, len);
+        full[len] = '\0';
     }
-    return key;
+    return full;
 }
 
-/* strip path and extension, extract key */
-/* linear search through bpl_table[] */
-/* return matching entry or NULL if not found */
+// Given "XXX‑wep", returns "wep"
+static char *strip_prefix(const char *key)
+{
+    const char *dash = strchr(key, '-');
+    if (!dash)
+        return strdup(key);
+    return strdup(dash);
+}
+
 const BPL_ENTRY *find_boilerplate(const char *filename)
 {
-    char *key = strip_path_ext(filename);
+    char *full = strip_path_ext(filename);
+    if (!full)
+        return NULL;
+
+    char *key = strip_prefix(full);
+    free(full);
     if (!key)
         return NULL;
 
@@ -186,7 +282,7 @@ const BPL_ENTRY *find_boilerplate(const char *filename)
             return &bpl_table[i];
         }
 
-        /* Check if key ends with the suffix (for .tbm files) */
+        /* Optional: allow suffix matching if you want .tbm entries to be themselves */
         size_t suffix_len = strlen(bpl_table[i].key);
         size_t key_len = strlen(key);
 
@@ -206,26 +302,30 @@ void write_to_tables(const BPL_ENTRY *entry, const char *filepath, OP *operation
 {
     FILE *fp;
 
-    if(!check_writable(filepath))
+    if (!check_writable(filepath))
     {
         fprintf(stderr, "%s%sError:%s Target path is not writable: %s\n",
                 TEX_BOLD, COL_RED, COL_RESET, operation->path);
         return;
     }
+
     fp = fopen(filepath, "w");
-    if(!fp)
+    if (!fp)
     {
         perror("fopen");
         return;
     }
 
-    if (entry && entry->variants){
+    if (entry && entry->variants)
+    {
         for (size_t i = 0; i < entry->variant_count; i++)
         {
-            if (entry->variants[i]){
+            if (entry->variants[i])
+            {
                 fprintf(fp, "%s\n", entry->variants[i]);
             }
         }
     }
+
     fclose(fp);
 }

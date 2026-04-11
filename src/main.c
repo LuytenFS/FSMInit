@@ -63,8 +63,9 @@ int main(int argc, char *argv[])
             "2. <path>        : Target directory\n"
             "3. <-tbl/-tbm>   : Table type (stdmc only)\n"
             "4. <prefix>      : Required for -tbm\n"
-            "5. [-debug]      : Log to log.txt\n"
-            "6. [-dry-run]    : Simulate only\n");
+            "5. [-bpl]        : Write boilerplate to tables\n"
+            "6. [-debug]      : Log to log.txt\n"
+            "7. [-dry-run]    : Simulate only\n");
         return 0;
     }
 
@@ -88,7 +89,7 @@ int main(int argc, char *argv[])
             fprintf(stderr, "%s%sUsage:%s -stdm <path> [-debug] [-dry-run]\n",
                     TEX_BOLD, COL_YELLOW, COL_RESET);
         else
-            fprintf(stderr, "%s%sUsage:%s -stdmc <path> <-tbl/-tbm> [prefix] [-debug] [-dry-run]\n",
+            fprintf(stderr, "%s%sUsage:%s -stdmc <path> <-tbl/-tbm> [prefix] [-bpl] [-debug] [-dry-run]\n",
                     TEX_BOLD, COL_YELLOW, COL_RESET);
         return 1;
     }
@@ -100,6 +101,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    int start_index = is_stdm ? 3 : 4;
     if (is_stdmc && operation.table_type && strcmp(operation.table_type, "-tbm") == 0)
     {
         if (argc < 5)
@@ -113,31 +115,14 @@ int main(int argc, char *argv[])
             return 1;
         }
         operation.prefix = argv[4];
+        start_index = 5;
     }
 
-    int arg_idx = is_stdm ? 3 : 4;
-    for (int i = arg_idx; i < argc; ++i)
+    for (int i = start_index; i < argc; ++i)
     {
         if (strcmp(argv[i], "-bpl") == 0)
         {
             operation.gen_boilerplate = 1;
-        }
-        else if (!operation.table_type &&
-                 (strcmp(argv[i], "-tbl") == 0 || strcmp(argv[i], "-tbm") == 0))
-        {
-            operation.table_type = argv[i];
-        }
-        else if (operation.table_type && strcmp(operation.table_type, "-tbm") == 0 &&
-                 !operation.prefix)
-        {
-            if (strlen(argv[i]) > 32)
-            {
-                fprintf(stderr, "%s%sError:%s Prefix too long (max 32 chars)\n",
-                        TEX_BOLD, COL_RED, COL_RESET);
-                return 1;
-                return 1;
-            }
-            operation.prefix = argv[i];
         }
         else if (strcmp(argv[i], "-debug") == 0)
         {
@@ -196,10 +181,8 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (operation.table_type && operation.gen_boilerplate)
+    if (operation.table_type && operation.gen_boilerplate && operation.dry_run == 0)
     {
-        printf("%sWriting boilerplate to tables...%s%s\n", TEX_BOLD, COL_MAGENTA, COL_RESET);
-
         char *tables_path = NULL;
         if (asprintf(&tables_path, "%s/tables", operation.path) == -1)
         {
@@ -210,6 +193,8 @@ int main(int argc, char *argv[])
             TABLE_FILE_LIST *tables = verify_tables_directory(tables_path);
             if (tables)
             {
+                printf("%sWriting boilerplate to tables...%s%s\n", TEX_BOLD, COL_MAGENTA, COL_RESET);
+
                 for (size_t i = 0; i < tables->count; i++)
                 {
                     const BPL_ENTRY *entry = find_boilerplate(tables->paths[i]);
