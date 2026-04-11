@@ -211,5 +211,25 @@ const BPL_ENTRY *find_boilderplate(const char *filename)
 
 void write_to_tables(const BPL_ENTRY *entry, const char *filepath, OP *operation)
 {
+    FILE *fp;
 
+    if(!check_writable(filepath))
+    {
+        fprintf(stderr, "%s%sError:%s Target path is not writable: %s\n",
+                TEX_BOLD, COL_RED, COL_RESET, operation->path);
+        return;
+    }
+    fp = fopen(filepath, "a");
+    if(!fp)
+    {
+        perror("fopen");
+        return;
+    }
+
+    /*
+     *   This is where we will write to tables using their file paths
+     *   since BPL_ENTRY's bpl_table[] has not yet been implemented, this function will remain as is.
+     */
+
+    fclose(fp);
 }
