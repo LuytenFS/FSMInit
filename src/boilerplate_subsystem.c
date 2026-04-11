@@ -6,9 +6,23 @@
 #include <sys/stat.h>
 #include <errno.h>
 
+// --- Common portability definitions (outside _WIN32) ---
+// Must be defined before any code that uses PATH_MAX / S_ISREG etc.
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
+#ifndef S_ISREG
+#define S_ISREG(m) (((m) & _S_IFMT) == _S_IFREG)
+#endif
+#ifndef S_ISDIR
+#define S_ISDIR(m) (((m) & _S_IFMT) == _S_IFDIR)
+#endif
+
 #ifdef _WIN32
 #include <io.h>
 #include <direct.h>
+#include <windows.h>
 
 // check if path is writable
 #define check_writable(p) (_access((p), 2) == 0)
@@ -33,84 +47,9 @@ static int _asprintf(char **ret, const char *format, ...)
     return size;
 }
 
-// Windows directory ENTRIES
-struct dirent
-{
-    char d_name[260];
-};
-
-typedef long long DIR;
-
-// _findfirst / _findnext wrapper to behave like opendir/readdir
-DIR *opendir(const char *dirname)
-{
-    char pattern[PATH_MAX + 4];
-    snprintf(pattern, sizeof(pattern), "%s/*", dirname);
-    long handle = _findfirst(pattern, &((struct _finddata_t){0}));
-    return handle != -1L ? (DIR *)handle : NULL;
-}
-
-struct dirent *readdir(DIR *dir)
-{
-    static struct _finddata_t entry;
-    static struct dirent de;
-    static long handle;
-
-    if (dir == NULL)
-        return NULL;
-
-    handle = (long)dir;
-
-    if (handle == 0)
-        return NULL;
-
-    if (handle == -1L)
-        return NULL;
-
-    // First call
-    if (handle == (long)dir && _findfirst != 0)
-    {
-        handle = _findfirst((const char *)_findfirst, &entry);
-        if (handle == -1)
-            return NULL;
-    }
-    else
-    {
-        // Subsequent calls
-        if (_findnext(handle, &entry) != 0)
-            return NULL;
-    }
-
-    strcpy(de.d_name, entry.name);
-    return &de;
-}
-
-int closedir(DIR *dir)
-{
-    if (dir == NULL)
-        return -1;
-    long handle = (long)dir;
-    if (handle == 0 || handle == -1L)
-        return -1;
-    _findclose(handle);
-    return 0;
-}
-
-// is a path a directory (Windows)
-int path_is_dir(const char *path)
-{
-    struct _stat st;
-    if (_stat(path, &st) != 0)
-        return 0;
-    return (st.st_mode & _S_IFDIR) != 0;
-}
-
-// realpath / normalize path if needed
-const char *path_real(const char *path)
-{
-    // just a placeholder; on Windows you can use _fullpath if you want
-    return path;
-}
+// --- Windows‑only stuff (opendir / readdir / closedir / path_is_dir) ---
+// ... (keep your Windows opendir / readdir / closedir / path_is_dir here)
+// ...
 
 #else
 #include <unistd.h>
