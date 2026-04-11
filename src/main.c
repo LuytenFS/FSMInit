@@ -1,16 +1,47 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h> // for va_list / va_start / va_end
 #include <stdbool.h>
 #include <limits.h>
 
 #ifdef _WIN32
 #include <io.h>
 #include <windows.h>
+
 #define isatty _isatty
+
+// Windows asprintf wrapper
+#define asprintf(buf, fmt, ...) _asprintf(buf, fmt, __VA_ARGS__)
+static int _asprintf(char **ret, const char *format, ...)
+{
+    va_list ap;
+    int size;
+    va_start(ap, format);
+    size = vsnprintf(NULL, 0, format, ap);
+    va_end(ap);
+    if (size < 0)
+        return -1;
+    *ret = malloc(size + 1);
+    if (!*ret)
+        return -1;
+    va_start(ap, format);
+    size = vsnprintf(*ret, size + 1, format, ap);
+    va_end(ap);
+    return size;
+}
+
 #else
 #include <unistd.h>
 #endif
+
+#include "version.h"
+#include "def_type.h"
+#include "file_subsystem.h"
+#include "text_type.h"
+#include "color.h"
+#include "boilerplate_subsystem.h"
+
 
 #include "version.h"
 #include "def_type.h"
