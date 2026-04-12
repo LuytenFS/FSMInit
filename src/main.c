@@ -42,14 +42,6 @@ static int _asprintf(char **ret, const char *format, ...)
 #include "color.h"
 #include "boilerplate_subsystem.h"
 
-
-#include "version.h"
-#include "def_type.h"
-#include "file_subsystem.h"
-#include "text_type.h"
-#include "color.h"
-#include "boilerplate_subsystem.h"
-
 bool g_color_enabled = false;
 
 int main(int argc, char *argv[])
