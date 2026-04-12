@@ -1,20 +1,38 @@
-/* main.c */
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h> // for va_list / va_start / va_end
 #include <stdbool.h>
 #include <limits.h>
 
 #ifdef _WIN32
 #include <io.h>
 #include <windows.h>
+
 #define isatty _isatty
+
+// Windows asprintf wrapper
+#define asprintf(buf, fmt, ...) _asprintf(buf, fmt, __VA_ARGS__)
+static int _asprintf(char **ret, const char *format, ...)
+{
+    va_list ap;
+    int size;
+    va_start(ap, format);
+    size = vsnprintf(NULL, 0, format, ap);
+    va_end(ap);
+    if (size < 0)
+        return -1;
+    *ret = malloc(size + 1);
+    if (!*ret)
+        return -1;
+    va_start(ap, format);
+    size = vsnprintf(*ret, size + 1, format, ap);
+    va_end(ap);
+    return size;
+}
+
 #else
 #include <unistd.h>
-#endif
-
-#ifndef PATH_MAX
-#define PATH_MAX 4096
 #endif
 
 #include "version.h"
@@ -22,6 +40,7 @@
 #include "file_subsystem.h"
 #include "text_type.h"
 #include "color.h"
+#include "boilerplate_subsystem.h"
 
 bool g_color_enabled = false;
 
@@ -50,6 +69,7 @@ int main(int argc, char *argv[])
     operation.prefix = NULL;
     operation.debug = 0;
     operation.dry_run = 0;
+    operation.gen_boilerplate = 0;
 
     if (strcmp(argv[1], "-help") == 0)
     {
@@ -66,8 +86,9 @@ int main(int argc, char *argv[])
             "2. <path>        : Target directory\n"
             "3. <-tbl/-tbm>   : Table type (stdmc only)\n"
             "4. <prefix>      : Required for -tbm\n"
-            "5. [-debug]      : Log to log.txt\n"
-            "6. [-dry-run]    : Simulate only\n");
+            "5. [-bpl]        : Write boilerplate to tables\n"
+            "6. [-debug]      : Log to log.txt\n"
+            "7. [-dry-run]    : Simulate only\n");
         return 0;
     }
 
@@ -91,7 +112,7 @@ int main(int argc, char *argv[])
             fprintf(stderr, "%s%sUsage:%s -stdm <path> [-debug] [-dry-run]\n",
                     TEX_BOLD, COL_YELLOW, COL_RESET);
         else
-            fprintf(stderr, "%s%sUsage:%s -stdmc <path> <-tbl/-tbm> [prefix] [-debug] [-dry-run]\n",
+            fprintf(stderr, "%s%sUsage:%s -stdmc <path> <-tbl/-tbm> [prefix] [-bpl] [-debug] [-dry-run]\n",
                     TEX_BOLD, COL_YELLOW, COL_RESET);
         return 1;
     }
@@ -122,10 +143,23 @@ int main(int argc, char *argv[])
 
     for (int i = start_index; i < argc; ++i)
     {
-        if (strcmp(argv[i], "-debug") == 0)
+        if (strcmp(argv[i], "-bpl") == 0)
+        {
+            operation.gen_boilerplate = 1;
+        }
+        else if (strcmp(argv[i], "-debug") == 0)
+        {
             operation.debug = 1;
+        }
         else if (strcmp(argv[i], "-dry-run") == 0)
+        {
             operation.dry_run = 1;
+        }
+        else
+        {
+            fprintf(stderr, "Unknown argument: %s\n", argv[i]);
+            return 1;
+        }
     }
 
     if (operation.debug)
@@ -167,6 +201,38 @@ int main(int argc, char *argv[])
                         TEX_BOLD, COL_RED, COL_RESET, operation.table_type);
                 return 1;
             }
+        }
+    }
+
+    if (operation.table_type && operation.gen_boilerplate && operation.dry_run == 0)
+    {
+        char *tables_path = NULL;
+        if (asprintf(&tables_path, "%s/tables", operation.path) == -1)
+        {
+            operation.errors++;
+        }
+        else
+        {
+            TABLE_FILE_LIST *tables = verify_tables_directory(tables_path);
+            if (tables)
+            {
+                printf("%sWriting boilerplate to tables...%s%s\n", TEX_BOLD, COL_MAGENTA, COL_RESET);
+
+                for (size_t i = 0; i < tables->count; i++)
+                {
+                    const BPL_ENTRY *entry = find_boilerplate(tables->paths[i]);
+                    if (entry)
+                    {
+                        write_to_tables(entry, tables->paths[i], &operation);
+                    }
+                }
+                // Cleanup
+                for (size_t i = 0; i < tables->count; i++)
+                    free(tables->paths[i]);
+                free(tables->paths);
+                free(tables);
+            }
+            free(tables_path);
         }
     }
 
