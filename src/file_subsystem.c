@@ -254,13 +254,12 @@ static void create_table_file(OP *operation, const char *filename, FILE *log, co
 void create_directories(OP *operation)
 {
     struct stat st;
-    FILE *log = operation->debug ? fopen("log.txt", "a") : NULL;
+    FILE *log = (operation && operation->debug) ? fopen("log.txt", "a") : NULL;
 
-    if (!operation || !operation->path || operation->path[0] == '\0')
-    {
-        if (log)
-            fclose(log);
-        return;
+    if (!operation || !operation->path || operation->path[0] == '\0') {
+      if (log)
+        fclose(log);
+      return;
     }
 
     if (stat(operation->path, &st) != 0 || !S_ISDIR(st.st_mode))
@@ -368,13 +367,12 @@ void create_directories(OP *operation)
 void create_tbl_tables(OP *operation)
 {
     struct stat st;
-    FILE *log = operation->debug ? fopen("log.txt", "a") : NULL;
+    FILE *log = (operation && operation->debug) ? fopen("log.txt", "a") : NULL;
 
-    if (!operation || !operation->path || operation->path[0] == '\0')
-    {
-        if (log)
-            fclose(log);
-        return;
+    if (!operation || !operation->path || operation->path[0] == '\0') {
+      if (log)
+        fclose(log);
+      return;
     }
 
     if (stat(operation->path, &st) != 0 || !S_ISDIR(st.st_mode))
@@ -432,17 +430,21 @@ void create_tbl_tables(OP *operation)
 void create_tbm_tables(OP *operation)
 {
     struct stat st;
-    FILE *log = operation->debug ? fopen("log.txt", "a") : NULL;
+    FILE *log = (operation && operation->debug) ? fopen("log.txt", "a") : NULL;
 
-    if (!operation || !operation->path || !operation->prefix || operation->prefix[0] == '\0')
-    {
-        if (log)
-            fprintf(log, "Error: Missing prefix for TBM\n");
-        fprintf(stderr, "%s%sError:%s TBM requires prefix\n", TEX_BOLD, COL_RED, COL_RESET);
+    if (!operation || !operation->path || !operation->prefix ||
+        operation->prefix[0] == '\0') {
+      if (log) {
+        fprintf(log, "Error: Missing prefix for TBM\n");
+        fclose(log);
+      }
+      fprintf(stderr, "%s%sError:%s TBM requires prefix\n", TEX_BOLD, COL_RED,
+              COL_RESET);
+
+      if (operation) {
         operation->errors++;
-        if (log)
-            fclose(log);
-        return;
+      }
+      return;
     }
 
     if (stat(operation->path, &st) != 0 || !S_ISDIR(st.st_mode))
@@ -500,13 +502,12 @@ void create_tbm_tables(OP *operation)
 void create_static_tables(OP *operation)
 {
     struct stat st;
-    FILE *log = operation->debug ? fopen("log.txt", "a") : NULL;
+    FILE *log = (operation && operation->debug) ? fopen("log.txt", "a") : NULL;
 
-    if (!operation || !operation->path || operation->path[0] == '\0')
-    {
-        if (log)
-            fclose(log);
-        return;
+    if (!operation || !operation->path || operation->path[0] == '\0') {
+      if (log)
+        fclose(log);
+      return;
     }
 
     if (stat(operation->path, &st) != 0 || !S_ISDIR(st.st_mode))
