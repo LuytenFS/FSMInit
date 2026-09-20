@@ -23,9 +23,6 @@ typedef struct OP
     int dirs_created;
     int tables_created;
     int errors;
-
-    /* For Boilerplates */
-    int gen_boilerplate;
 } OP;
 
 /* =======================
@@ -113,13 +110,6 @@ typedef struct FS_TABLES
 {
     const char *name;
 } FS_TABLES;
-
-typedef struct BPL_ENTRY
-{
-    const char *key; /* "-wep" or "weapons", etc... */ 
-    const char **variants; /* array of boilerplate strings */
-    size_t variant_count; 
-} BPL_ENTRY;
 
 typedef struct TABLE_FILE_LIST
 {

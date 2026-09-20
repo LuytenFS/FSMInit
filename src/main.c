@@ -40,7 +40,6 @@ static int _asprintf(char **ret, const char *format, ...)
 #include "file_subsystem.h"
 #include "text_type.h"
 #include "color.h"
-#include "boilerplate_subsystem.h"
 
 bool g_color_enabled = false;
 
@@ -69,7 +68,6 @@ int main(int argc, char *argv[])
     operation.prefix = NULL;
     operation.debug = 0;
     operation.dry_run = 0;
-    operation.gen_boilerplate = 0;
 
     if (strcmp(argv[1], "-help") == 0)
     {
@@ -86,9 +84,8 @@ int main(int argc, char *argv[])
             "2. <path>        : Target directory\n"
             "3. <-tbl/-tbm>   : Table type (stdmc only)\n"
             "4. <prefix>      : Required for -tbm\n"
-            "5. [-bpl]        : Write boilerplate to tables\n"
-            "6. [-debug]      : Log to log.txt\n"
-            "7. [-dry-run]    : Simulate only\n");
+            "5. [-debug]      : Log to log.txt\n"
+            "6. [-dry-run]    : Simulate only\n");
         return 0;
     }
 
@@ -143,11 +140,7 @@ int main(int argc, char *argv[])
 
     for (int i = start_index; i < argc; ++i)
     {
-        if (strcmp(argv[i], "-bpl") == 0)
-        {
-            operation.gen_boilerplate = 1;
-        }
-        else if (strcmp(argv[i], "-debug") == 0)
+        if (strcmp(argv[i], "-debug") == 0)
         {
             operation.debug = 1;
         }
@@ -201,38 +194,6 @@ int main(int argc, char *argv[])
                         TEX_BOLD, COL_RED, COL_RESET, operation.table_type);
                 return 1;
             }
-        }
-    }
-
-    if (operation.table_type && operation.gen_boilerplate && operation.dry_run == 0)
-    {
-        char *tables_path = NULL;
-        if (asprintf(&tables_path, "%s/tables", operation.path) == -1)
-        {
-            operation.errors++;
-        }
-        else
-        {
-            TABLE_FILE_LIST *tables = verify_tables_directory(tables_path);
-            if (tables)
-            {
-                printf("%sWriting boilerplate to tables...%s%s\n", TEX_BOLD, COL_MAGENTA, COL_RESET);
-
-                for (size_t i = 0; i < tables->count; i++)
-                {
-                    const BPL_ENTRY *entry = find_boilerplate(tables->paths[i]);
-                    if (entry)
-                    {
-                        write_to_tables(entry, tables->paths[i], &operation);
-                    }
-                }
-                // Cleanup
-                for (size_t i = 0; i < tables->count; i++)
-                    free(tables->paths[i]);
-                free(tables->paths);
-                free(tables);
-            }
-            free(tables_path);
         }
     }
 
